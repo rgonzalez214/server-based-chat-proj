@@ -85,7 +85,7 @@ Code will explicitly create sockets, send data and receive data from the sockets
 
 ## To Dos
 
-###  <span style="color:#0074CC"> Connection to the Server </span>
+###  <span style="color:#0074CC">Connection to the Server</span>
 A client needs to connect first to the server. Connection to the server is initiated when a user logs on.
 1. When the user at client A logs on, client A sends a HELLO (Client-ID-A) message to the server, using UDP transport.
 2. The server verifies that Client-ID-A is an ID on the list of subscribers. If so, the server retrieves the client’s secret key and sends a CHALLENGE (rand) message to the client, using UDP.
@@ -94,7 +94,8 @@ A client needs to connect first to the server. Connection to the server is initi
 5. Client A establishes a TCP connection to the port at port_number and sends a CONNECT (rand_cookie) to the server. From this point on, until the TCP connection is closed, all data (signaling messages and chat) is exchanged over the TCP connection.
 6. The server sends CONNECTED to the client. The client is connected.
 7. The client tears down the TCP connection when the user types “Log off” or when the activity timer expires.
-###  <span style="color:#0074CC"> Client A Initiates Chat Session to B </span>
+8. 
+###  <span style="color:#0074CC">Client A Initiates Chat Session to B</span>
 This scenario will go through the following steps. Client A must have already gone through the
 connection phase and be connected to the server.
 1. To start a chat with client B, the end user types “Chat Client-ID-B”, and client A sends a
@@ -198,7 +199,7 @@ HISTORY_RESP message for each chat message in the history.
 ###  <span style="color:#0074CC">Validation Scenarios</span>
 We will be validating the code based on the following scenarios.
 <br/>
-### <span style="color:#0074CC"> Basic chat initiated and closed by A</span>
+### <span style="color:#0074CC">Basic chat initiated and closed by A</span>
 
 | Step | Action | Expected behavior |
 |------|--------|-------------------|
@@ -211,7 +212,7 @@ We will be validating the code based on the following scenarios.
 |6 |Client A’s user types “Log off"| Client A should close the TCP connection|
 <br/>
 
-#### <span style="color:#0074CC"> Basic chat initiated by A and closed by B</span>
+#### <span style="color:#0074CC">Basic chat initiated by A and closed by B</span>
 | Step | Action | Expected behavior |
 |------|--------|-------------------|
 |0   | Go through steps 0 to 1 of “Basic chat initiated and closed by A”|   |
@@ -224,7 +225,7 @@ We will be validating the code based on the following scenarios.
 
 </br>
 
-#### <span style="color:#0074CC"> Basic chat initiated by C, but B is already in another chat</span>
+#### <span style="color:#0074CC">Basic chat initiated by C, but B is already in another chat</span>
 
 |Step |Action |Expected behavior|
 |-|-|-|
@@ -234,7 +235,7 @@ We will be validating the code based on the following scenarios.
 
 </br>
 
-#### <span style="color:#0074CC"> History recall</span>
+#### <span style="color:#0074CC">History recall</span>
 |Step |Action |Expected behavior|
 |-|-|-|
 |0| Go through the steps of| “Basic chat initiated and closed by A” |
@@ -243,7 +244,7 @@ We will be validating the code based on the following scenarios.
 
 <br/>
 
-#### <span style="color:#0074CC"> Simultaneous chat sessions</span>
+#### <span style="color:#0074CC">Simultaneous chat sessions</span>
 Verify you can establish 5 simultaneous chat sessions between 5 pairs of clients.
 
 
@@ -263,7 +264,7 @@ Verify you can establish 5 simultaneous chat sessions between 5 pairs of clients
 ## Getting Started
 ?
 
-### <span style="color:#0074CC"> Prerequisites</span>
+### <span style="color:#0074CC">Prerequisites</span>
  
 EX:
 * npm 
