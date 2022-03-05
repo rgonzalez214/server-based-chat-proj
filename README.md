@@ -38,8 +38,8 @@
       <ul>
         <li><a href="#to-dos">To Dos</a></li>
         <ul>
-            <li><a href="#-connection-to-the-server-">Connection to the Server</a></li>
-            <li><a href="#-client-a-initiates-chat-session-to-b-">Client A Initiates Chat Session to B</a></li>
+            <li><a href="#connection-to-the-server">Connection to the Server</a></li>
+            <li><a href="#client-a-initiates-chat-session-to-b">Client A Initiates Chat Session to B</a></li>
             <li><a href="#security">Security</a></li>
             <li><a href="#chat-history">Chat History</a></li>
             <li><a href="#protocol-messages">Protocol Messages</a></li>
