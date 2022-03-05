@@ -57,7 +57,7 @@
     </li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#contributors">Contributors</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#assignment-milestones">Assignment Milestons</a></li>
     <li><a href="#assignnment-grading-criteria">Assignment Grading Criteria</a></li>
