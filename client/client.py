@@ -7,17 +7,17 @@ SERVER_IP = "127.0.0.1"
 PORT = 8008
 
 # Assigning ClientID
-f1 = open("client/clientIDs.txt", "r")
-f2 = open("client/usedClientIDs.txt", "a+")
+f1 = open("clientIDs.txt", "r")
+f2 = open("usedClientIDs.txt", "a+")
 ID = ""
-if os.path.getsize("client/usedClientIDs.txt") == 0:
+if os.path.getsize("usedClientIDs.txt") == 0:
     ID = f1.readline()
     ID = ID[0:-2]
     f2.write(ID)
     f2.write("\n")
 else:
     SN = 0
-    while                              :
+    while SN<0:
         print(f2.readline())
         SN = SN + 1
     print(SN)
@@ -29,11 +29,10 @@ else:
     f2.write(ID)
     f2.write("\n")
 
-MESSAGE = bytes(input(f"{ID} > "), 'utf-8')
-
+MESSAGE = bytes(input(f"{ID} > "), 'UTF-8')
 # print("UDP target IP: %s" % SERVER_IP)
 # print("UDP target port: %s" % PORT)
-print("message: %s" % MESSAGE)
+print(ID, "message: %s" % str(MESSAGE, 'utf-8'))
 
 sock = socket.socket(socket.AF_INET, # Internet
                      socket.SOCK_DGRAM) # UDP
