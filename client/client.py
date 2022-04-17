@@ -30,9 +30,6 @@ def AssignID():
         return "InvalidUser"
 
 def Parse(MESSAGE):
-    print(MESSAGE)
-    print(type(MESSAGE))
-    print(len(MESSAGE))
 
     if MESSAGE.lower() == "log on":
         return f"HELLO({ID})\n"                                   # ASK THE TA!!!
