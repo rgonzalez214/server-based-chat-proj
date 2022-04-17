@@ -9,12 +9,13 @@ PORT = 8008
 
 # Assigning ClientID
 f1 = open("clientsIDs.txt", "r")
-f2 = open("usedClientIDs.txt", "a+")
+f2 = open("usedClientIDs.txt", "r+")
 IDs = f1.readlines()
 usedIDs = f2.readlines()
 ID = ""
 
-print
+print(f1)
+print(f2)
 
 assigned = 0
 for used in IDs:
