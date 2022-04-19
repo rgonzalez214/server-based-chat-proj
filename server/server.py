@@ -10,6 +10,9 @@ sock.bind((HOST_IP, PORT))
 while True:
     data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
     print("received message: %s" % data)
+
+    # Send back to data & addr sender, a reply, based on parsing it
+
     # 1. Check if client is on list of subscribers
     # 2. Retrieve the client’s secret key and send a CHALLENGE (rand) message to the client, using UDP
     # 3. Wait for RESPONSE from client.

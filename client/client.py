@@ -49,9 +49,6 @@ def Parse(MESSAGE):
 #     f2.write(ID)
 #     i += 1
 
-def HELLO(ClientID):
-    UDPClientSocket.sendto(bytesToSend, serverAddressPort)
-
 def main():
     global ID
     ID = AssignID()
@@ -65,9 +62,11 @@ def main():
 
         MESSAGE = bytes(Parse(input(f"{ID} > ")), "utf-8")
         sock.sendto(MESSAGE, (SERVER_IP, PORT))
+        REPLY = sock.recvfrom(1024)
         # print("UDP target IP: %s" % SERVER_IP)
         # print("UDP target port: %s" % PORT)
-        print("%s" % str(MESSAGE, 'utf-8'))
+        print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))
+        print("REPLY : %s\n" % str(REPLY, 'utf-8'))
 
     print("Thank you for participating in our chat bot!\n")
 
