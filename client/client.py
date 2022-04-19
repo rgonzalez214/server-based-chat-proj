@@ -66,7 +66,7 @@ def authorize():
     challenge_timeout.start()
     # INTENTIONAL FAIL
     time.sleep(5)                       # For Testing : Waiting for Terrorists to win, comment-out otherwise
-    if CHALLENGE_RECEIVED:
+    if CHALLENGE_RECEIVED and challenge_timeout.is_alive():
         # Bomb has been Defused
         challenge_timeout.cancel()
 
@@ -78,9 +78,9 @@ def authorize():
         response_timeout.start()
         # INTENTIONAL FAIL
         time.sleep(5)  # For Testing : Waiting for Terrorists to win, comment-out otherwise
-        if AUTH_SUCCESS:
+        if AUTH_SUCCESS and response_timeout.is_alive():
             response_timeout.cancel()
-        elif AUTH_FAIL:
+        elif AUTH_FAIL and response_timeout.is_alive():
             response_timeout.cancel()
 
     # Do nothing so input goes back to main for client to re-try login
