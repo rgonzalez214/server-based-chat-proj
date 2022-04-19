@@ -55,7 +55,7 @@ def authorize():
 
     # Waiting for a Challenge
     timeout_timer.start()
-    time.sleep(5)                       # Dev-Testing : Waiting for Terrorists to win.
+    time.sleep(5)                       # For Testing : Waiting for Terrorists to win.
     if CHALLENGE_RECEIVED:
         timeout_timer.cancel()          # Bomb has been defused
         #Send Response
