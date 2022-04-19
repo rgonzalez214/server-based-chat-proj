@@ -1,4 +1,5 @@
 import socket
+import signal
 import string
 import random
 import os
@@ -30,11 +31,26 @@ def AssignID():
         return "InvalidUser"
 
 def Parse(MESSAGE):
+    match MESSAGE.lower():
+        case "log on":
+            Authorize()
+        case "log off":
+            print("Thank you for participating in our chat bot!\n")
+            exit(0)
 
     if MESSAGE.lower() == "log on":
-        return f"HELLO({ID})\n"                                   # ASK THE TA!!!
+        Authorize()
     if MESSAGE.lower() == "log off":
-        return f"InsertFunctionHere({ID})\n"                                   # ASK THE TA!!!
+        return f"InsertFunctionHere({ID})\n"
+
+
+def Authorize():
+    #Send Hello
+    #Challenge Wait
+    #Send Response
+    #Auth Wait
+    return 0
+
 
 
 # Generate Random Client IDs (10 character strings)
