@@ -1,6 +1,6 @@
 import socket
 import time
-import threading
+from threading import Timer
 import string
 import random
 import os
@@ -28,7 +28,7 @@ def AssignID():
     f2.close()
 
     if assigned == 0:
-        print("Could not assign ID, too many users! Please try again later. No free lunch in Life :)\n")
+        print("Could not assign ID, too many users! Please try again later. No free lunch in Life :)")
         return "InvalidUser"
 
 def parse(MESSAGE):
@@ -36,27 +36,28 @@ def parse(MESSAGE):
         case "log on":
             authorize()
         case "log off":
-            print("Thank you for participating in our chat bot!\n")
+            print("Thank you for participating in our chat bot!")
             exit(0)
+    return MESSAGE
 
 def timeout():
-    print("Server did not respond, timed out... Try re-logging again.\n")
+    print("Server did not respond, timed out... Try re-logging again.")
 
 
 
 def authorize():
-    signal.signal(signal.SIGALRM, timeout)
+    timeout_timer = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
     CHALLENGE_RECEIVED = 1
 
     # Sending Hello
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
-    sock.sendto("HELLO{ID}", (SERVER_IP, PORT))
+    sock.sendto(bytes(f"HELLO({ID})", 'utf-8'), (SERVER_IP, PORT))
 
     # Waiting for a Challenge
-    signal.alarm(5)         # Call SIGALRM in 60 seconds, 5 seconds for testing
-    time.sleep(5)           # Purposefully wait for Terrorists to win
+    timeout_timer.start()
+    time.sleep(5)                       # Dev-Testing : Waiting for Terrorists to win.
     if CHALLENGE_RECEIVED:
-        signal.alarm(0)     # Bomb has been defused
+        timeout_timer.cancel()          # Bomb has been defused
         #Send Response
 
     # Do nothing so input goes back to main for client to re-try login.
@@ -84,13 +85,13 @@ def main():
     flag = 1
     while True:
 
-        MESSAGE = bytes(parse(input(f"{ID} > ")), "utf-8")
+        MESSAGE = bytes(parse(input(f"{ID} > ")), 'utf-8')
         sock.sendto(MESSAGE, (SERVER_IP, PORT))
-        REPLY = sock.recvfrom(1024)
+        # REPLY = sock.recvfrom(1024)
         # print("UDP target IP: %s" % SERVER_IP)
         # print("UDP target port: %s" % PORT)
         print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))
-        print("REPLY : %s\n" % str(REPLY, 'utf-8'))
+        # print("REPLY : %s\n" % str(REPLY, 'utf-8'))
 
     print("Thank you for participating in our chat bot!\n")
 
