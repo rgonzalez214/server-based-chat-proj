@@ -40,6 +40,7 @@ while True:
         print(payload[7:].lower().strip())
         chat_history.read_log(client_A_ID, payload[7:].lower().strip())
 
+    #  sliced message to separate payload
     if payload[:6].lower() == 'log on':
         print("initiate log on")
         connect("CONNECTED")

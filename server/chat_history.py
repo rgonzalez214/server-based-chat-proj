@@ -1,5 +1,4 @@
 from pathlib import Path
-from pprint import pprint
 
 """
 User sends message
@@ -31,7 +30,9 @@ def file_name(clients):
         f_name = f"{clients[0]}{clients[1]}.txt"
         f1 = open(f"{file_path}{f_name}", "w")
         # build payload
-        payload = f"Date\t\tTime\t\tSession ID\tclient\t\tData\n"
+        # payload = f"Date\t\tTime\t\tSession ID\tclient\t\tData\n"
+        payload = f"Session ID\tclient\t\tData\n"
+
         print(payload)
         # write payload
         f1.write(payload)
@@ -58,7 +59,7 @@ def write_log(file, curr_time, session_id, client_a, client_b, data):
     f1 = open(file, "a+")
     # build payload
     # payload = f"{curr_time} {session_id} {client_a} {client_b}:\n {data}\n"
-    payload = f"{curr_time}\t{session_id}\t\t{client_a}\t{data}\n"
+    payload = f"{session_id}\t\t{client_a}\t{data}\n"
     # print(payload)
     # write payload
     f1.write(payload)
@@ -67,7 +68,7 @@ def write_log(file, curr_time, session_id, client_a, client_b, data):
     return f'wrote to {file[8:]}'
 
 
-# read file to end user based on provided client name
+# read file to end user
 def read_log(clienta, clientb):
     clients = [clienta, clientb]
     f1 = open(f"{file_path}{file_name(clients)}", "r")
