@@ -31,10 +31,12 @@ def AssignID():
 
 def Parse(MESSAGE):
 
-    if MESSAGE.lower() == "log on":
+    if MESSAGE.lower() == f"{ID}log on":
         return f"HELLO({ID})\n"                                   # ASK THE TA!!!
-    if MESSAGE.lower() == "log off":
+    if MESSAGE.lower() == f"{ID}log off":
         return f"InsertFunctionHere({ID})\n"                                   # ASK THE TA!!!
+    else:
+        return f"{ID}{MESSAGE}"
 
 
 # Generate Random Client IDs (10 character strings)
@@ -67,8 +69,25 @@ def main():
         sock.sendto(MESSAGE, (SERVER_IP, PORT))
         # print("UDP target IP: %s" % SERVER_IP)
         # print("UDP target port: %s" % PORT)
-        print("%s" % str(MESSAGE, 'utf-8'))
+        # print("%s" % str(MESSAGE, 'utf-8'))
 
     print("Thank you for participating in our chat bot!\n")
 
 main()
+
+
+"""
+--Client A Initiates Chat Session to B--
+Client A must have already gone through the connection phase and be connected to the server.
+    - End user types “Chat Client-ID-B” (client A sends a CHAT_REQUEST (Client-ID-B)).
+        1. The server sends CHAT_STARTED(session-ID, Client-ID-B) to client A
+        2. The server sends CHAT_STARTED(session-ID, Client-ID-A) to client B
+        3. Client A and Client B are now engaged in a chat session and can send chat messages with each other, through the server. 
+        4. The clients display “Chat started” to the end user at A and B. 
+       
+--Client A or B Terminates Chat Session---
+    - End user types “End Chat”, (Client sends END_REQUEST (session-ID) to the server). 
+        1. The server sends an END_NOTIF(session-ID) to the other client. 
+        2. The Clients display “Chat ended” to their respective end users.
+
+"""
