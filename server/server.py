@@ -27,6 +27,8 @@ while True:
     print("SERVER-received message: %s" % data)
     #  sliced message to separate ID
     client_A_ID = str(data[:9], 'utf-8')
+
+    # update client_B_ID--------------------------------
     client_B_ID = 'client789'
     print("client-A-ID is: ", client_A_ID)
     print("client-B-ID is: ", client_B_ID)
