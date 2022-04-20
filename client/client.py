@@ -48,7 +48,7 @@ def parse(MESSAGE):
         case "log off":
             print("Thank you for participating in our chat bot!")
             exit(0)
-    return MESSAGE
+    return f"{ID}{MESSAGE}"
 
 # Function to Authorize client on typing "log on"
 def authorize():
@@ -110,9 +110,9 @@ def main():
     while True:
         MESSAGE = bytes(parse(input(f"{ID} > ")), 'utf-8')
         sock.sendto(MESSAGE, (SERVER_IP, PORT))
-        # REPLY = sock.recvfrom(1024)
-        print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))
-        # print("REPLY : %s\n" % str(REPLY, 'utf-8'))
+        REPLY = sock.recvfrom(1024)
+        # print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))
+        print("REPLY : %s\n" % str(REPLY, 'utf-8'))
 
 
 main()
