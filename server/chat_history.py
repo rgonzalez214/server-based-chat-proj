@@ -8,16 +8,16 @@ User sends message
 - server appends message and timestamp to log file
 
 """
-# designate path to chat history
-# file_path = "history/"
+# create / designate path to history directory
 p = Path("history/")
 p.mkdir(0o755, True, True)
 
+
 def file_name(clients):
     # store a current list of all txt files found in 'files'
-    p.glob('*.txt')
-    files = [x.name for x in p if x.is_file()]
-    # print("current files available", "".join(files))
+    txt_files = p.glob('*.txt')
+    files = [x.name for x in txt_files if x.is_file()]
+    print("current files available: ", files)
 
     # build the filename and validate the existence against the 'files' list.
     f_name = f"{clients[0]}{clients[1]}.txt" if f"{clients[0]}{clients[1]}.txt" in files \
@@ -25,7 +25,7 @@ def file_name(clients):
         else f"no_file"
     if f_name == 'no_file':
         f_name = f"{clients[0]}{clients[1]}.txt"
-        f1 = open(f"{file_path}{f_name}", "w")
+        f1 = open(f"{p}/{f_name}", "w")
         # build payload
         # payload = f"Date\t\tTime\t\tSession ID\tclient\t\tData\n"
         payload = f"Session ID\tclient\t\tData\n"
@@ -44,7 +44,7 @@ def access_log(curr_time, session_id, clients, data):
     # build the filename and validate the existence against the 'files' list.
     f_name = file_name(clients)
     # build the filename and path to pass as argument
-    f1 = f"{file_path}{f_name}"
+    f1 = f"{p}/{f_name}"
 
     # pass the arguments along to create and or update log data
     res = write_log(f1, curr_time, session_id, f_name[:9], f_name[9:18], data)
@@ -70,7 +70,7 @@ def write_log(file, curr_time, session_id, client_a, client_b, data):
 # read file to end user
 def read_log(clienta, clientb):
     clients = [clienta, clientb]
-    f1 = open(f"{file_path}{file_name(clients)}", "r")
+    f1 = open(f"{p}/{file_name(clients)}", "r")
     log = f1.readlines()
     for line in log:
         print(line)
