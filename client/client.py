@@ -48,7 +48,7 @@ def parse(MESSAGE):
         case "log off":
             print("Thank you for participating in our chat bot!")
             exit(0)
-    return f"{ID}{MESSAGE}"
+    return f"{MESSAGE}"
 
 # Function to Authorize client on typing "log on"
 def authorize():
@@ -66,21 +66,22 @@ def authorize():
     challenge_timeout.start()
     # INTENTIONAL FAIL
     time.sleep(5)                       # For Testing : Waiting for Terrorists to win, comment-out otherwise
-    if CHALLENGE_RECEIVED:
+    if CHALLENGE_RECEIVED and challenge_timeout.is_alive():
         # Bomb has been Defused
         challenge_timeout.cancel()
 
         # Sending RESPONSE(Client-ID, Res) to server
         print("Handshake established! Authenticating User...")
+
         # Insert Code Here
 
         # Waiting for CHALLENGE(rand) from server
         response_timeout.start()
         # INTENTIONAL FAIL
         time.sleep(5)  # For Testing : Waiting for Terrorists to win, comment-out otherwise
-        if AUTH_SUCCESS:
+        if AUTH_SUCCESS and response_timeout.is_alive():
             response_timeout.cancel()
-        elif AUTH_FAIL:
+        elif AUTH_FAIL and response_timeout.is_alive():
             response_timeout.cancel()
 
     # Do nothing so input goes back to main for client to re-try login
