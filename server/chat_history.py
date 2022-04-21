@@ -9,16 +9,13 @@ User sends message
 
 """
 # designate path to chat history
-file_path = "history/"
-
-p = Path(file_path).glob('*.txt')
-files = [x.name for x in p if x.is_file()]
-# print("current files available", "".join(files))
-
+# file_path = "history/"
+p = Path("history/")
+p.mkdir(0o755, True, True)
 
 def file_name(clients):
     # store a current list of all txt files found in 'files'
-    p = Path(file_path).glob('*.txt')
+    p.glob('*.txt')
     files = [x.name for x in p if x.is_file()]
     # print("current files available", "".join(files))
 
@@ -41,6 +38,7 @@ def file_name(clients):
         # print(f'new file {f_name} created')
     return f_name
 
+
 #  open file
 def access_log(curr_time, session_id, clients, data):
     # build the filename and validate the existence against the 'files' list.
@@ -52,6 +50,7 @@ def access_log(curr_time, session_id, clients, data):
     res = write_log(f1, curr_time, session_id, f_name[:9], f_name[9:18], data)
     # print(res)
     return f"accessed {f_name}"
+
 
 # write chat to log
 def write_log(file, curr_time, session_id, client_a, client_b, data):
