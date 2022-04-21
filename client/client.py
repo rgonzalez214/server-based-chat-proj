@@ -48,7 +48,7 @@ def parse(MESSAGE):
         case "log off":
             print("Thank you for participating in our chat bot!")
             exit(0)
-    return f"{ID}{MESSAGE}"
+    return f"{MESSAGE}"
 
 # Function to Authorize client on typing "log on"
 def authorize():
@@ -72,6 +72,7 @@ def authorize():
 
         # Sending RESPONSE(Client-ID, Res) to server
         print("Handshake established! Authenticating User...")
+
         # Insert Code Here
 
         # Waiting for CHALLENGE(rand) from server

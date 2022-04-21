@@ -25,7 +25,7 @@ def file_name(clients):
         else f"no_file"
     if f_name == 'no_file':
         f_name = f"{clients[0]}{clients[1]}.txt"
-        f1 = open(f"{file_path}{f_name}", "w")
+        f1 = open(f"{file_path}{f_name}", "w+")
         # build payload
         # payload = f"Date\t\tTime\t\tSession ID\tclient\t\tData\n"
         payload = f"Session ID\tclient\t\tData\n"
