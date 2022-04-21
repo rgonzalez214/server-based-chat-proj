@@ -57,34 +57,34 @@ def chat_started(clients, payload):
     curr_time = x.strftime("%x\t\t%I:%M:%S%p")
     return chat_history.access_log(curr_time, session_ID, clients, payload)
 
+def main():
+    while True:
+        data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
+        print("SERVER-received message: %s" % data)
+        #  sliced message to separate ID
+        client_A_ID = str(data[:9], 'utf-8')
 
-while True:
-    data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
-    print("SERVER-received message: %s" % data)
-    #  sliced message to separate ID
-    client_A_ID = str(data[:9], 'utf-8')
+        # update client_B_ID--------------------------------
+        client_B_ID = 'client789'
+        print("client-A-ID is: ", client_A_ID)
+        print("client-B-ID is: ", client_B_ID)
 
-    # update client_B_ID--------------------------------
-    client_B_ID = 'client789'
-    print("client-A-ID is: ", client_A_ID)
-    print("client-B-ID is: ", client_B_ID)
+        #  sliced message to separate payload
+        payload = str(data[9:], 'utf-8')
+        print("payload is: ", payload)
+        if payload[:7].lower().strip() == 'history':
+            print(payload[7:].lower().strip())
+            chat_history.read_log(client_A_ID, payload[7:].lower().strip())
 
-    #  sliced message to separate payload
-    payload = str(data[9:], 'utf-8')
-    print("payload is: ", payload)
-    if payload[:7].lower().strip() == 'history':
-        print(payload[7:].lower().strip())
-        chat_history.read_log(client_A_ID, payload[7:].lower().strip())
+        #  sliced message to separate payload
+        if payload[:6].lower() == 'log on':
+            print("initiate log on")
+            connect("CONNECTED")
+        clients= [client_A_ID, client_B_ID]
+        res = chat_started(clients, payload)
+        print(res)
 
-    #  sliced message to separate payload
-    if payload[:6].lower() == 'log on':
-        print("initiate log on")
-        connect("CONNECTED")
-    clients= [client_A_ID, client_B_ID]
-    res = chat_started(clients, payload)
-    print(res)
-
-
+main()
 
 # 1. Check if client is on list of subscribers
 # 2. Retrieve the client’s secret key and send a CHALLENGE (rand) message to the client, using UDP
