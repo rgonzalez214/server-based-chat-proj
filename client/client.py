@@ -1,4 +1,6 @@
 import socket
+import time
+from threading import Timer
 import string
 import random
 import os
@@ -7,37 +9,82 @@ SERVER_IP = "127.0.0.1"
 PORT = 8008
 ID = ""
 
-# Assigning ClientID
+# Function to assign each client an ID which is not part of usedClientIDs (currently active clients)
 def AssignID():
+    # Each client is assigned a pre-selected unique 10-character string as an ID
+    # While a client is "active" (has not logged-off), their IDs are
+    # stored in client/usedClientIDs.txt for unique assignment of IDs
     f1 = open("clientsIDs.txt", "r")
     f2 = open("usedClientIDs.txt", "r+")
     IDs = f1.readlines()
     usedIDs = f2.readlines()
     assigned = 0
-    for used in IDs:
-        if used not in usedIDs:
+    for newID in IDs:
+        if newID not in usedIDs:
             assigned = 1
-            ID = used
+            ID = newID
             ID = ID[0:-2]
-            f2.write(used)
+            f2.write(newID)
             return ID
         assigned = 0
     f1.close()
     f2.close()
 
     if assigned == 0:
-        print("Could not assign ID, too many users! Please try again later. No free lunch in Life :)\n")
+        print("Could not assign ID, too many users! Please try again later. No free lunch in Life :)")
         return "InvalidUser"
 
-def Parse(MESSAGE):
+# Function to print server timeout response incase server takes too long to respond
+def timeout():
+    print("Server did not respond, timed out... Try re-logging again.")
 
-    if MESSAGE.lower() == f"{ID}log on":
-        return f"HELLO({ID})\n"                                   # ASK THE TA!!!
-    if MESSAGE.lower() == f"{ID}log off":
-        return f"InsertFunctionHere({ID})\n"                                   # ASK THE TA!!!
-    else:
-        return f"{ID}{MESSAGE}"
+# Function to parse each message input by the client to do respective functions
+def parse(MESSAGE):
+    # Match case to non-character sensitive message
+    match MESSAGE.lower():
+        case "log on":
+            print("Please wait while we are trying to establish a connection to the chat server...")
+            authorize()
+        case "log off":
+            print("Thank you for participating in our chat bot!")
+            exit(0)
+    return f"{MESSAGE}"
 
+# Function to Authorize client on typing "log on"
+def authorize():
+    challenge_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
+    response_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
+    CHALLENGE_RECEIVED = 1
+    AUTH_SUCCESS = 0
+    AUTH_FAIL = 1
+    # Sending HELLO(Client-ID) to server
+    print("Connection established! Attempting Handshake...")
+    sock.sendto(bytes(f"HELLO({ID})", 'utf-8'), (SERVER_IP, PORT))
+
+    # Waiting for CHALLENGE(rand) from server
+    challenge_timeout.start()
+    # INTENTIONAL FAIL
+    time.sleep(5)                       # For Testing : Waiting for Terrorists to win, comment-out otherwise
+    if CHALLENGE_RECEIVED and challenge_timeout.is_alive():
+        # Bomb has been Defused
+        challenge_timeout.cancel()
+
+        # Sending RESPONSE(Client-ID, Res) to server
+        print("Handshake established! Authenticating User...")
+
+        # Insert Code Here
+
+        # Waiting for CHALLENGE(rand) from server
+        response_timeout.start()
+        # INTENTIONAL FAIL
+        time.sleep(5)  # For Testing : Waiting for Terrorists to win, comment-out otherwise
+        if AUTH_SUCCESS and response_timeout.is_alive():
+            response_timeout.cancel()
+        elif AUTH_FAIL and response_timeout.is_alive():
+            response_timeout.cancel()
+
+    # Do nothing so input goes back to main for client to re-try login
 
 # Generate Random Client IDs (10 character strings)
 # i=0
@@ -51,43 +98,22 @@ def Parse(MESSAGE):
 #     f2.write(ID)
 #     i += 1
 
-def HELLO(ClientID):
-    UDPClientSocket.sendto(bytesToSend, serverAddressPort)
-
+# Main Function to drive the program
 def main():
+    # Assigning unique ID to client
     global ID
     ID = AssignID()
 
     # Opening a Socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP Connection to the Internet
 
-    # Parsed Input is sent as a message through the UDP Socket
-    flag = 1
+    # Loop to parse through each message from the client
     while True:
-
-        MESSAGE = bytes(Parse(input(f"{ID} > ")), "utf-8")
+        MESSAGE = bytes(parse(input(f"{ID} > ")), 'utf-8')
         sock.sendto(MESSAGE, (SERVER_IP, PORT))
-        # print("UDP target IP: %s" % SERVER_IP)
-        # print("UDP target port: %s" % PORT)
-        # print("%s" % str(MESSAGE, 'utf-8'))
+        REPLY = sock.recvfrom(1024)
+        # print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))
+        print("REPLY : %s\n" % str(REPLY, 'utf-8'))
 
-    print("Thank you for participating in our chat bot!\n")
 
 main()
-
-
-"""
---Client A Initiates Chat Session to B--
-Client A must have already gone through the connection phase and be connected to the server.
-    - End user types “Chat Client-ID-B” (client A sends a CHAT_REQUEST (Client-ID-B)).
-        1. The server sends CHAT_STARTED(session-ID, Client-ID-B) to client A
-        2. The server sends CHAT_STARTED(session-ID, Client-ID-A) to client B
-        3. Client A and Client B are now engaged in a chat session and can send chat messages with each other, through the server. 
-        4. The clients display “Chat started” to the end user at A and B. 
-       
---Client A or B Terminates Chat Session---
-    - End user types “End Chat”, (Client sends END_REQUEST (session-ID) to the server). 
-        1. The server sends an END_NOTIF(session-ID) to the other client. 
-        2. The Clients display “Chat ended” to their respective end users.
-
-"""

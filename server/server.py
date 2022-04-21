@@ -10,10 +10,12 @@ sock = socket.socket(socket.AF_INET, # Internet
                      socket.SOCK_DGRAM) # UDP
 sock.bind((HOST_IP, PORT))
 
-# respond to user who types log on
-def connect(MESSAGE):
-    # send message to user tcp or udp?
-    print(MESSAGE)
+def parse(MESSAGE):
+    # Match case to non-character sensitive message
+    if MESSAGE.lower()[0:5] == "hello(":
+        challenge()
+    if MESSAGE.lower()[0:7] == "history_req(":
+        chat_history.read_log("abcd", "efgh")
 
 # after chat is started between client A and client B
 def chat_started(clients, payload):
@@ -40,6 +42,7 @@ while True:
         print(payload[7:].lower().strip())
         chat_history.read_log(client_A_ID, payload[7:].lower().strip())
 
+    #  sliced message to separate payload
     if payload[:6].lower() == 'log on':
         print("initiate log on")
         connect("CONNECTED")
