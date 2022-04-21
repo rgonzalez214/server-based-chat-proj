@@ -33,22 +33,30 @@ def end_notif():
 # Function to parse client messages based on message sent by a certain client.
 def parse(MESSAGE, client_available=None):
     if MESSAGE[0:5] == "HELLO(":
+        print(MESSAGE)
         challenge()
     if MESSAGE[0:8] == "RESPONSE(":
+        print(MESSAGE)
         authenticate()
     if MESSAGE[0:7] == "CONNECT(":
+        print(MESSAGE)
         connected()
     # S:Think if to include Client A connected messaged should be parsed through this or not
     if MESSAGE[0:12] == "CHAT_REQUEST(":
         if client_available:
+            print(MESSAGE)
             chat_started()
         elif not client_available:
+            print(MESSAGE)
             unavailable()
     if MESSAGE[0:11] == "END_REQUEST(":
+        print(MESSAGE)
         end_notif()
     if MESSAGE[0:4] == "CHAT(":
+        print(MESSAGE)
         print("chat_history.write_log()")
     if MESSAGE[0:11] == "HISTORY_REQ(":
+        print(MESSAGE)
         chat_history.read_log("abcd", "efgh")
 
 # after chat is started between client A and client B

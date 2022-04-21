@@ -56,8 +56,8 @@ def authorize():
     response_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
     CHALLENGE_RECEIVED = 1
-    AUTH_SUCCESS = 0
-    AUTH_FAIL = 1
+    AUTH_SUCCESS = 1
+    AUTH_FAIL = 0
     # Sending HELLO(Client-ID) to server
     print("Connection established! Attempting Handshake...")
     sock.sendto(bytes(f"HELLO({ID})", 'utf-8'), (SERVER_IP, PORT))
@@ -65,7 +65,7 @@ def authorize():
     # Waiting for CHALLENGE(rand) from server
     challenge_timeout.start()
     # INTENTIONAL FAIL
-    time.sleep(5)                       # For Testing : Waiting for Terrorists to win, comment-out otherwise
+    # time.sleep(5)                       # For Testing : Waiting for Terrorists to win, comment-out otherwise
     if CHALLENGE_RECEIVED and challenge_timeout.is_alive():
         # Bomb has been Defused
         challenge_timeout.cancel()
@@ -78,7 +78,7 @@ def authorize():
         # Waiting for CHALLENGE(rand) from server
         response_timeout.start()
         # INTENTIONAL FAIL
-        time.sleep(5)  # For Testing : Waiting for Terrorists to win, comment-out otherwise
+        # time.sleep(5)  # For Testing : Waiting for Terrorists to win, comment-out otherwise
         if AUTH_SUCCESS and response_timeout.is_alive():
             response_timeout.cancel()
         elif AUTH_FAIL and response_timeout.is_alive():
@@ -110,10 +110,10 @@ def main():
     # Loop to parse through each message from the client
     while True:
         MESSAGE = bytes(parse(input(f"{ID} > ")), 'utf-8')
-        sock.sendto(MESSAGE, (SERVER_IP, PORT))
-        REPLY = sock.recvfrom(1024)
-        # print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))
-        print("REPLY : %s\n" % str(REPLY, 'utf-8'))
+        # sock.sendto(MESSAGE, (SERVER_IP, PORT))
+        # REPLY = sock.recvfrom(1024)
+        print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))
+        # print("REPLY : %s\n" % str(REPLY, 'utf-8'))
 
 
 main()
