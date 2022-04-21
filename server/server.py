@@ -10,11 +10,45 @@ sock = socket.socket(socket.AF_INET, # Internet
                      socket.SOCK_DGRAM) # UDP
 sock.bind((HOST_IP, PORT))
 
-def parse(MESSAGE):
-    # Match case to non-character sensitive message
-    if MESSAGE.lower()[0:5] == "hello(":
+
+def challenge():
+    pass
+
+
+def authenticate():
+    pass
+
+
+def connected():
+    pass
+
+
+def unavailable():
+    pass
+
+
+def end_notif():
+    pass
+
+# Function to parse client messages based on message sent by a certain client.
+def parse(MESSAGE, client_available=None):
+    if MESSAGE[0:5] == "HELLO(":
         challenge()
-    if MESSAGE.lower()[0:7] == "history_req(":
+    if MESSAGE[0:8] == "RESPONSE(":
+        authenticate()
+    if MESSAGE[0:7] == "CONNECT(":
+        connected()
+    # S:Think if to include Client A connected messaged should be parsed through this or not
+    if MESSAGE[0:12] == "CHAT_REQUEST(":
+        if client_available:
+            chat_started()
+        elif not client_available:
+            unavailable()
+    if MESSAGE[0:11] == "END_REQUEST(":
+        end_notif()
+    if MESSAGE[0:4] == "CHAT(":
+        print("chat_history.write_log()")
+    if MESSAGE[0:11] == "HISTORY_REQ(":
         chat_history.read_log("abcd", "efgh")
 
 # after chat is started between client A and client B
