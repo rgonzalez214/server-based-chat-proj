@@ -32,6 +32,7 @@ def AssignID():
         print("Could not assign ID, too many users! Please try again later. No free lunch in Life :)\n")
         return "InvalidUser"  # can still type ID is just set to invalid user
 
+def AssignSK():
 
 # Function to print server timeout response in case server takes too long to responnd
 def timeout():

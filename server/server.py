@@ -41,24 +41,24 @@ def a3(key, rand):
     a6 = a4[32:]
     a7 = int(a5, 2)
     int(a6, 2)
-
-def K_Agen():
-    i = 0
-    while i < 10:
-        n = random.getrandbits(128)
-        n = n + "\n"
-        f1 = open("server/sK_A.txt", "a")
-        f2 = open("client/cK_A.txt", "a")
-        f1.write(n)
-        f2.write(n)
-        i += 1
+#
+#def K_Agen():
+#    i = 0
+#    while i < 10:
+#        n = secrets.token_hex(8)
+        #nu = ''.join(random.choice(n))
+        #n = n + "\n"
+#        f1 = open("sK_A.txt", "a+")
+#        f2 = open("cK_A.txt", "a+")
+#        f1.write(str(n) + "\n")
+#        f2.write(str(n) + "\n")
+#        i += 1
 
 def rand_num():
-    nums = string.digits
-    nu = ''.join(random.choice(nums) for i in range(10))
-    print(nu)
-    K_Agen()
-    challenge(nu)
+    nums = secrets.token_hex(8)
+    print(nums)
+    a3()
+    #challenge(nums)
 
 
 def challenge(rand):
