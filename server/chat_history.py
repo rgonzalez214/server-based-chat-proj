@@ -39,23 +39,25 @@ def file_name(clients):
     return f_name
 
 
-#  open file
-def access_log(curr_time, session_id, clients, data):
-    # build the filename and validate the existence against the 'files' list.
-    f_name = file_name(clients)
-    # build the filename and path to pass as argument
-    f1 = f"{p}/{f_name}"
-
-    # pass the arguments along to create and or update log data
-    res = write_log(f1, curr_time, session_id, f_name[:9], f_name[9:18], data)
-    # print(res)
-    return f"accessed {f_name}"
+# #  open file
+# def access_log(curr_time, session_id, clients, data):
+#     # build the filename and validate the existence against the 'files' list.
+#     f_name = file_name(clients)
+#     # build the filename and path to pass as argument
+#     f1 = f"{p}/{f_name}"
+#
+#     # pass the arguments along to create and or update log data
+#     res = write_log(f1, curr_time, session_id, f_name[:9], f_name[9:18], data)
+#     # print(res)
+#     return f"accessed {f_name}"
 
 
 # write chat to log
-def write_log(file, curr_time, session_id, client_a, client_b, data):
+def write_log(session_id, client_a, client_b, data):
+    clients = [client_a, client_b]
     # open file with append rights
-    f1 = open(file, "a+")
+    f1 = open(f"{p}/{file_name(clients)}", "a+")
+
     # build payload
     # payload = f"{curr_time} {session_id} {client_a} {client_b}:\n {data}\n"
     payload = f"{session_id}\t\t{client_a}\t{data}\n"
@@ -64,7 +66,7 @@ def write_log(file, curr_time, session_id, client_a, client_b, data):
     f1.write(payload)
     # close file
     f1.close()
-    return f'wrote to {file[8:]}'
+    return f'wrote to {f1.name}'
 
 
 # read file to end user
