@@ -6,7 +6,6 @@ User sends message
 - server defines timestamp of message arrival
 - server creates log file with clientIDs as filename
 - server appends message and timestamp to log file
-
 """
 # designate path to chat history
 # file_path = "history/"
