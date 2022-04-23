@@ -54,9 +54,9 @@ def file_name(clients):
 
 # write chat to log
 def write_log(session_id, client_a, client_b, data):
-    clients = [client_a, client_b]
+    f = file_name([client_a, client_b])
     # open file with append rights
-    f1 = open(f"{p}/{file_name(clients)}", "a+")
+    f1 = open(f"{p}/{f}", "a+")
 
     # build payload
     # payload = f"{curr_time} {session_id} {client_a} {client_b}:\n {data}\n"
@@ -71,8 +71,8 @@ def write_log(session_id, client_a, client_b, data):
 
 # read file to end user
 def read_log(clienta, clientb):
-    clients = [clienta, clientb]
-    f1 = open(f"{p}/{file_name(clients)}", "r")
+    f = file_name([clienta, clientb])
+    f1 = open(f"{p}/{f}", "r")
     log = f1.readlines()
     for line in log:
         print(line)
