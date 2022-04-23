@@ -1,16 +1,33 @@
 import socket
 import time
 from threading import Timer
-import string
-import random
-import os
 
 SERVER_IP = "127.0.0.1"
 PORT = 8008
 ID = ""
+K = ""
+
+def encryptionAlgorithm(key, rand):
+    k = int(key,16)
+    m = int(rand,16)
+    kb = bin(k)[6:]
+    mb = bin(m)[4:]
+    kbl = kb[0:64]
+    kbr = kb[64:]
+    mbl = mb[0:64]
+    mbr = mb[64:]
+    a1 = int(kbl, 2)^int(mbr, 2)
+    a2 = int(kbr, 2)^int(mbl, 2)
+    a3 = a1^a2
+    a4 = bin(a3)[2:].zfill(64)
+    a5 = a4[0:32]
+    a6 = a4[32:]
+    a7 = int(a5, 2)
+    int(a6, 2)
+    return bin(a7)[2:].zfill(len(a5))
 
 # Function to assign each client an ID which is not part of usedClientIDs (currently active clients)
-def AssignID():
+def AssignIDandKey():
     # Each client is assigned a pre-selected unique 10-character string as an ID
     # While a client is "active" (has not logged-off), their IDs are
     # stored in client/usedClientIDs.txt for unique assignment of IDs
@@ -23,9 +40,10 @@ def AssignID():
         if newID not in usedIDs:
             assigned = 1
             ID = newID
-            ID = ID[0:-35]
+            K = ID[11:-1]
+            ID = ID[0:10]
             f2.write(newID)
-            return ID
+            return ID, K
         assigned = 0
     f1.close()
     f2.close()
@@ -34,27 +52,43 @@ def AssignID():
         print("Could not assign ID, too many users! Please try again later. No free lunch in Life :)\n")
         return "InvalidUser"  # can still type ID is just set to invalid user
 
-#assign key
-def AssignK():
-    f1 = open("clientsIDs.txt", "r")
-    f2 = open("usedClientIDs.txt", "r+")
-    k = f1.readlines()
-    usedk = f2.readlines()
-    assigned = 0
-    for used in k:
-        if used not in usedk:
-            assigned = 1
-            k = used
-            k = k[11:-2]
-            f2.write(used)
-            return k
-        assigned = 0
-    f1.close()
-    f2.close()
-
 # Function to print server timeout response in case server takes too long to responnd
 def timeout():
     print("Server did not respond, timed out... Try re-logging again.")
+
+# Function to Authorize client on typing "log on"
+def authorize():
+    challenge_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
+    response_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
+    AUTH_SUCCESS = 1
+    AUTH_FAIL = 0
+    # Sending HELLO(Client-ID) to server
+    print("Connection established! Attempting Handshake...")
+    sock.sendto(bytes(f"HELLO({ID})", 'utf-8'), (SERVER_IP, PORT))
+
+    # Waiting for CHALLENGE(rand) from server
+    challenge_timeout.start()
+    hello_response, addr = sock.recvfrom(1024)
+    # If server not alive, WinError 10054 Existing connection forcibly closed by server pops up. -- Add except for this
+    if len(hello_response) > 0:
+        challenge_timeout.cancel()
+        # Sending RESPONSE(Client-ID, Res) to server
+        if str(hello_response,'utf-8') != "Err:UnverifiedUser":
+            print("Handshake established! Authenticating User...")
+            hello_response = str(hello_response[10:-1], 'utf-8')
+            sock.sendto(bytes(f"RESPONSE({ID},{encryptionAlgorithm(K, hello_response)})", 'utf-8'), (SERVER_IP, PORT))
+        else:
+            print(f"{hello_response}: Try re-logging again.")
+
+        # Waiting for CHALLENGE(rand) from server
+        response_timeout.start()
+        # INTENTIONAL FAIL
+        # time.sleep(5)  # For Testing : Waiting for Terrorists to win, comment-out otherwise
+        if AUTH_SUCCESS and response_timeout.is_alive():
+            response_timeout.cancel()
+        elif AUTH_FAIL and response_timeout.is_alive():
+            response_timeout.cancel()
 
 # Function to parse each message input by the client to do respective functions
 def parse(MESSAGE):
@@ -68,46 +102,11 @@ def parse(MESSAGE):
             exit(0)
     return f"{MESSAGE}"
 
-# Function to Authorize client on typing "log on"
-def authorize():
-    challenge_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
-    response_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
-    CHALLENGE_RECEIVED = 1
-    AUTH_SUCCESS = 1
-    AUTH_FAIL = 0
-    # Sending HELLO(Client-ID) to server
-    print("Connection established! Attempting Handshake...")
-    sock.sendto(bytes(f"HELLO({ID})", 'utf-8'), (SERVER_IP, PORT))
-
-    # Waiting for CHALLENGE(rand) from server
-    challenge_timeout.start()
-    # INTENTIONAL FAIL
-    time.sleep(5)                       # For Testing : Waiting for Terrorists to win, comment-out otherwise
-    if CHALLENGE_RECEIVED and challenge_timeout.is_alive():
-        # Bomb has been Defused
-        challenge_timeout.cancel()
-
-        # Sending RESPONSE(Client-ID, Res) to server
-        print("Handshake established! Authenticating User...")
-        # Insert Code Here
-
-        # Waiting for CHALLENGE(rand) from server
-        response_timeout.start()
-        # INTENTIONAL FAIL
-        # time.sleep(5)  # For Testing : Waiting for Terrorists to win, comment-out otherwise
-        if AUTH_SUCCESS and response_timeout.is_alive():
-            response_timeout.cancel()
-        elif AUTH_FAIL and response_timeout.is_alive():
-            response_timeout.cancel()
 
 def main():
     global ID
     global K
-    ID = AssignID()
-    K = AssignK()
-    print(ID)
-    print(K)
+    ID, K = AssignIDandKey()
 
     # Opening a Socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
@@ -122,7 +121,6 @@ def main():
 
 
 main()
-
 
 """
 --Client A Initiates Chat Session to B--
