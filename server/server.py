@@ -44,8 +44,6 @@ def a3(key, rand):
 def rand_num():
     nums = secrets.token_hex(16)
     return nums
-    #a3()
-    #challenge(nums)
 
 
 def challenge(rand):
