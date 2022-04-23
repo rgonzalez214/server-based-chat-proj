@@ -6,16 +6,17 @@ User sends message
 - server defines timestamp of message arrival
 - server creates log file with clientIDs as filename
 - server appends message and timestamp to log file
+
 """
 # designate path to chat history
-# file_path = "history/"
 p = Path("history/")
 p.mkdir(0o755, True, True)
 
+
 def file_name(clients):
     # store a current list of all txt files found in 'files'
-    p.glob('*.txt')
-    files = [x.name for x in p if x.is_file()]
+    txt_files = p.glob('*.txt')
+    files = [x.name for x in txt_files if x.is_file()]
     # print("current files available", "".join(files))
 
     # build the filename and validate the existence against the 'files' list.
@@ -24,7 +25,7 @@ def file_name(clients):
         else f"no_file"
     if f_name == 'no_file':
         f_name = f"{clients[0]}{clients[1]}.txt"
-        f1 = open(f"{file_path}{f_name}", "w+")
+        f1 = open(f"{p}/{f_name}", "w+")
         # build payload
         # payload = f"Date\t\tTime\t\tSession ID\tclient\t\tData\n"
         payload = f"Session ID\tclient\t\tData\n"
@@ -38,23 +39,25 @@ def file_name(clients):
     return f_name
 
 
-#  open file
-def access_log(curr_time, session_id, clients, data):
-    # build the filename and validate the existence against the 'files' list.
-    f_name = file_name(clients)
-    # build the filename and path to pass as argument
-    f1 = f"{file_path}{f_name}"
-
-    # pass the arguments along to create and or update log data
-    res = write_log(f1, curr_time, session_id, f_name[:9], f_name[9:18], data)
-    # print(res)
-    return f"accessed {f_name}"
+# #  open file
+# def access_log(curr_time, session_id, clients, data):
+#     # build the filename and validate the existence against the 'files' list.
+#     f_name = file_name(clients)
+#     # build the filename and path to pass as argument
+#     f1 = f"{p}/{f_name}"
+#
+#     # pass the arguments along to create and or update log data
+#     res = write_log(f1, curr_time, session_id, f_name[:9], f_name[9:18], data)
+#     # print(res)
+#     return f"accessed {f_name}"
 
 
 # write chat to log
-def write_log(file, curr_time, session_id, client_a, client_b, data):
+def write_log(session_id, client_a, client_b, data):
+    f = file_name([client_a, client_b])
     # open file with append rights
-    f1 = open(file, "a+")
+    f1 = open(f"{p}/{f}", "a+")
+
     # build payload
     # payload = f"{curr_time} {session_id} {client_a} {client_b}:\n {data}\n"
     payload = f"{session_id}\t\t{client_a}\t{data}\n"
@@ -63,13 +66,13 @@ def write_log(file, curr_time, session_id, client_a, client_b, data):
     f1.write(payload)
     # close file
     f1.close()
-    return f'wrote to {file[8:]}'
+    return f'wrote to {f1.name}'
 
 
 # read file to end user
 def read_log(clienta, clientb):
-    clients = [clienta, clientb]
-    f1 = open(f"{file_path}{file_name(clients)}", "r")
+    f = file_name([clienta, clientb])
+    f1 = open(f"{p}/{f}", "r")
     log = f1.readlines()
     for line in log:
         print(line)
