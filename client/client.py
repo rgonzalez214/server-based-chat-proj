@@ -21,7 +21,7 @@ def AssignID():
         if used not in usedIDs:
             assigned = 1
             ID = used
-            ID = ID[0:-2]
+            ID = ID[0:-35]
             f2.write(used)
             return ID
         assigned = 0
@@ -34,8 +34,8 @@ def AssignID():
 
 #assign key
 def AssignK():
-    f1 = open("cK_A.txt", "r")
-    f2 = open("usedcK_A.txt", "r+")
+    f1 = open("clientsIDs.txt", "r")
+    f2 = open("usedClientIDs.txt", "r+")
     k = f1.readlines()
     usedk = f2.readlines()
     assigned = 0
@@ -43,7 +43,7 @@ def AssignK():
         if used not in usedk:
             assigned = 1
             k = used
-            k = k[0:-2]
+            k = k[11:-2]
             f2.write(used)
             return k
         assigned = 0
@@ -123,3 +123,20 @@ def main():
 
 
 main()
+
+
+"""
+--Client A Initiates Chat Session to B--
+Client A must have already gone through the connection phase and be connected to the server.
+    - End user types “Chat Client-ID-B” (client A sends a CHAT_REQUEST (Client-ID-B)).
+        1. The server sends CHAT_STARTED(session-ID, Client-ID-B) to client A
+        2. The server sends CHAT_STARTED(session-ID, Client-ID-A) to client B
+        3. Client A and Client B are now engaged in a chat session and can send chat messages with each other, through the server. 
+        4. The clients display “Chat started” to the end user at A and B. 
+       
+--Client A or B Terminates Chat Session---
+    - End user types “End Chat”, (Client sends END_REQUEST (session-ID) to the server). 
+        1. The server sends an END_NOTIF(session-ID) to the other client. 
+        2. The Clients display “Chat ended” to their respective end users.
+
+"""

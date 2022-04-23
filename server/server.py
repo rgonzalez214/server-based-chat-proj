@@ -4,7 +4,7 @@ import datetime
 import random
 import secrets
 import chat_history
-import chat_started
+#import chat_started
 HOST_IP = "127.0.0.1"
 PORT = 8009
 
@@ -31,20 +31,18 @@ def a3(key, rand):
     kbr = kb[64:]
     mbl = mb[0:64]
     mbr = mb[64:]
-    a1 = int(kbl, 2)
-    int(mbr, 2)
-    a2 = int(kbr, 2)
-    int(mbl, 2)
-    a3 = a1 ^ a2
+    a1 = int(kbl, 2)^int(mbr, 2)
+    a2 = int(kbr, 2)^int(mbl, 2)
+    a3 = a1^a2
     a4 = bin(a3)[2:].zfill(64)
     a5 = a4[0:32]
     a6 = a4[32:]
     a7 = int(a5, 2)
     int(a6, 2)
+    return bin(a7)[2:].zfill(len(a5))
 
 def rand_num():
-    nums = secrets.token_hex(8)
-    print(nums)
+    nums = secrets.token_hex(16)
     return nums
     #a3()
     #challenge(nums)
@@ -53,6 +51,23 @@ def rand_num():
 def challenge(rand):
     sock.sendto(bytes(rand, "utf-8"), ((HOST_IP, PORT)))
 
+def getID(data):
+    id = data[data.find('(')+1:data.find(')')]
+    print(id)
+    return id
+
+def findK(ID):
+    f1 = open("listofsubscribers.txt","r")
+    IDs = f1.readlines()
+    assigned = 0
+    for newID in IDs:
+        if ID in newID:
+            assigned = 1
+            keys = newID
+            keys = newID[11:-2]
+            return int(keys,16)
+        assigned = 0
+    f1.close()
 
 print("[STARTING] server is starting...")
 #start()
@@ -61,7 +76,9 @@ while True:
     print("SERVER-received message: %s" % data)
     if "HELLO(" in str(data):
         rand = rand_num()
-        XRES = a3()
+        cID = getID(str(data))
+        key = findK(cID)
+        XRES = a3(key,int(rand,16))
         challenge(rand)
     #  sliced message to separate ID
     client_A_ID = str(data[:9], 'utf-8')
@@ -83,8 +100,8 @@ while True:
         print("initiate log on")
         connect("CONNECTED")
     clients= [client_A_ID, client_B_ID]
-    res = chat_started(clients, payload)
-    print(res)
+    #res = chat_started(clients, payload)
+    #print(res)
 
 
 
