@@ -23,7 +23,7 @@ def AssignID():
         if newID not in usedIDs:
             assigned = 1
             ID = newID
-            ID = ID[0:-2]
+            ID = ID[0:-35]
             f2.write(newID)
             return ID
         assigned = 0
@@ -36,8 +36,8 @@ def AssignID():
 
 #assign key
 def AssignK():
-    f1 = open("cK_A.txt", "r")
-    f2 = open("usedcK_A.txt", "r+")
+    f1 = open("clientsIDs.txt", "r")
+    f2 = open("usedClientIDs.txt", "r+")
     k = f1.readlines()
     usedk = f2.readlines()
     assigned = 0
@@ -45,7 +45,7 @@ def AssignK():
         if used not in usedk:
             assigned = 1
             k = used
-            k = k[0:-2]
+            k = k[11:-2]
             f2.write(used)
             return k
         assigned = 0
@@ -101,23 +101,7 @@ def authorize():
         elif AUTH_FAIL and response_timeout.is_alive():
             response_timeout.cancel()
 
-    # Do nothing so input goes back to main for client to re-try login
-
-# Generate Random Client IDs (10 character strings)
-# i=0
-# while i < 10:
-#     letters = string.ascii_lowercase
-#     ID = ''.join(random.choice(letters) for i in range(10))
-#     ID = ID + "\n"
-#     f2 = open("server/listofsubscribers.txt", "a")
-#     f1 = open("client/clientsIDs.txt", "a")
-#     f1.write(ID)
-#     f2.write(ID)
-#     i += 1
-
-# Main Function to drive the program
 def main():
-    # Assigning unique ID to client
     global ID
     global K
     ID = AssignID()
@@ -138,3 +122,20 @@ def main():
 
 
 main()
+
+
+"""
+--Client A Initiates Chat Session to B--
+Client A must have already gone through the connection phase and be connected to the server.
+    - End user types “Chat Client-ID-B” (client A sends a CHAT_REQUEST (Client-ID-B)).
+        1. The server sends CHAT_STARTED(session-ID, Client-ID-B) to client A
+        2. The server sends CHAT_STARTED(session-ID, Client-ID-A) to client B
+        3. Client A and Client B are now engaged in a chat session and can send chat messages with each other, through the server. 
+        4. The clients display “Chat started” to the end user at A and B. 
+       
+--Client A or B Terminates Chat Session---
+    - End user types “End Chat”, (Client sends END_REQUEST (session-ID) to the server). 
+        1. The server sends an END_NOTIF(session-ID) to the other client. 
+        2. The Clients display “Chat ended” to their respective end users.
+
+"""
