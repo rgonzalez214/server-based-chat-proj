@@ -3,7 +3,8 @@ import random
 import secrets
 import chat_history
 HOST_IP = "127.0.0.1"
-PORT = 8008
+UDP_PORT = 8008
+TCP_PORT = 4761
 
 UDPsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Welcoming socket for UDP
 
@@ -29,7 +30,6 @@ def encryptionAlgorithm(key, rand):
 def rand_num():
     nums = secrets.token_hex(16)
     return nums
-
 
 def getID(data):
     id = data[data.find('(')+1:data.find(')')]
@@ -68,11 +68,11 @@ def challenge(rand, clientAddr, clientID):
     else:
         UDPsocket.sendto(bytes("Err:UnverifiedUser", 'utf-8'), clientAddr)
 
-def auth_succ():
-    pass
+def auth_success(rand_cookie, portnumber, clientAddr):
+    UDPsocket.sendto(bytes(f"AUTH_SUCCESS({rand_cookie},{TCP_PORT})", "utf-8"), clientAddr)
 
-def auth_fail():
-    pass
+def auth_fail(clientAddr):
+    UDPsocket.sendto(bytes(f"AUTH_FAIL", "utf-8"), clientAddr)
 
 def connected():
     pass
@@ -87,21 +87,24 @@ def end_notif():
     pass
 
 # Function to parse client messages based on message sent by a certain client.
-def parse(MESSAGE, clientAddr, client_available=None):
+def parse(MESSAGE, clientAddr):
+
     if MESSAGE[0:5] == "HELLO":
         rand = challenge(rand_num(), clientAddr, MESSAGE[6:-1])
-        response, addr = UDPsocket.recvfrom(1024)  # buffer size is 1024 bytes
+        response, clientAddr = UDPsocket.recvfrom(1024)  # buffer size is 1024 bytes
         if str(response[0:8],'utf-8') == "RESPONSE":
             ID = str(response[9:19],'utf-8')
             Res = str(response[20:-1],'utf-8')
             XRES = encryptionAlgorithm(findK(ID), rand)
             if Res == XRES:
-                auth_succ()
+                auth_success(rand_num(), TCP_PORT, clientAddr)
             else:
-                auth_fail()
+                auth_fail(clientAddr)
+
     if MESSAGE[0:7] == "CONNECT":
         print(MESSAGE)
         connected()
+
     # S:Think if to include Client A connected messaged should be parsed through this or not
     if MESSAGE[0:12] == "CHAT_REQUEST":
         if client_available:
@@ -110,12 +113,15 @@ def parse(MESSAGE, clientAddr, client_available=None):
         elif not client_available:
             print(MESSAGE)
             unavailable()
+
     if MESSAGE[0:11] == "END_REQUEST":
         print(MESSAGE)
         end_notif()
+
     if MESSAGE[0:4] == "CHAT":
         print(MESSAGE)
         print("chat_history.write_log()")
+
     if MESSAGE[0:11] == "HISTORY_REQ":
         print(MESSAGE)
         chat_history.read_log("abcd", "efgh")
@@ -123,11 +129,10 @@ def parse(MESSAGE, clientAddr, client_available=None):
 def main():
     global UDPsocket
     print("[STARTING] server is starting...")
-    UDPsocket.bind((HOST_IP, PORT)) # UDP socket bound
-    print(f"[STARTING] server is running on {HOST_IP}:{PORT}")
+    UDPsocket.bind((HOST_IP, UDP_PORT)) # UDP socket bound
+    print(f"[STARTING] server is running on {HOST_IP}:{UDP_PORT}")
 
     while True:
-
         message, addr = UDPsocket.recvfrom(1024) # buffer size is 1024 bytes
         print("SERVER-received message: %s" % message)
         parse(str(message, 'utf-8'), addr)

@@ -69,38 +69,40 @@ def authorize():
 
     # Waiting for CHALLENGE(rand) from server
     challenge_timeout.start()
-    hello_response, addr = sock.recvfrom(1024)
-    # If server not alive, WinError 10054 Existing connection forcibly closed by server pops up. -- Add except for this
-    if len(hello_response) > 0:
-        challenge_timeout.cancel()
-        # Sending RESPONSE(Client-ID, Res) to server
-        if str(hello_response,'utf-8') != "Err:UnverifiedUser":
-            print("Handshake established! Authenticating User...")
-            hello_response = str(hello_response[10:-1], 'utf-8')
-            sock.sendto(bytes(f"RESPONSE({ID},{encryptionAlgorithm(K, hello_response)})", 'utf-8'), (SERVER_IP, PORT))
-        else:
-            print(f"{hello_response}: Try re-logging again.")
+    challenge, addr = sock.recvfrom(1024)
+    challenge_timeout.cancel()
 
-        # Waiting for CHALLENGE(rand) from server
+    # Checking for CHALLENGE success
+    if str(challenge,'utf-8') != "Err:UnverifiedUser":
+        print("Authenticating User...")
+        challenge = str(challenge[10:-1], 'utf-8')
+        sock.sendto(bytes(f"RESPONSE({ID},{encryptionAlgorithm(K, challenge)})", 'utf-8'), (SERVER_IP, PORT))
+
+        # Waiting for AUTHENTICATION from server
         response_timeout.start()
-        # INTENTIONAL FAIL
-        # time.sleep(5)  # For Testing : Waiting for Terrorists to win, comment-out otherwise
-        if AUTH_SUCCESS and response_timeout.is_alive():
-            response_timeout.cancel()
-        elif AUTH_FAIL and response_timeout.is_alive():
-            response_timeout.cancel()
+        response, addr = sock.recvfrom(1024)
+        response_timeout.cancel()
+        if str(response[0:12], 'utf-8') == "AUTH_SUCCESS":
+            print("Successfully Authenticated!")
+            print("Welcome to the Chat Server.\n")
+        elif str(response[0:9], 'utf-8') == "AUTH_FAIL":
+            print("User could not be Authenticated... Please try again with valid credentials")
+    else:
+        print(f"{challenge}: Try re-logging again.")
+
+
 
 # Function to parse each message input by the client to do respective functions
-def parse(MESSAGE):
+def parse(input):
     # Match case to non-character sensitive message
-    match MESSAGE.lower():
-        case "log on":
-            print("Please wait while we are trying to establish a connection to the chat server...")
+    if input == "log on":
+            print("\nPlease wait while we are trying to establish a connection to the chat server...")
             authorize()
-        case "log off":
+
+    if input == "log off":
             print("Thank you for participating in our chat bot!")
             exit(0)
-    return f"{MESSAGE}"
+    return input
 
 
 def main():
@@ -113,10 +115,10 @@ def main():
 
     # Loop to parse through each message from the client
     while True:
-        MESSAGE = bytes(parse(input(f"{ID} > ")), 'utf-8')
+        parse(input(f"{ID} > ").lower())
         # sock.sendto(MESSAGE, (SERVER_IP, PORT))
         # REPLY = sock.recvfrom(1024)
-        print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))
+        # print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))
         # print("REPLY : %s\n" % str(REPLY, 'utf-8'))
 
 
