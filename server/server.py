@@ -1,5 +1,4 @@
 import socket
-import random
 import secrets
 import chat_history
 HOST_IP = "127.0.0.1"
@@ -68,7 +67,7 @@ def challenge(rand, clientAddr, clientID):
     else:
         UDPsocket.sendto(bytes("Err:UnverifiedUser", 'utf-8'), clientAddr)
 
-def auth_success(rand_cookie, portnumber, clientAddr):
+def auth_success(rand_cookie, clientAddr):
     UDPsocket.sendto(bytes(f"AUTH_SUCCESS({rand_cookie},{TCP_PORT})", "utf-8"), clientAddr)
 
 def auth_fail(clientAddr):
@@ -97,7 +96,7 @@ def parse(MESSAGE, clientAddr):
             Res = str(response[20:-1],'utf-8')
             XRES = encryptionAlgorithm(findK(ID), rand)
             if Res == XRES:
-                auth_success(rand_num(), TCP_PORT, clientAddr)
+                auth_success(rand_num(), clientAddr)
             else:
                 auth_fail(clientAddr)
 
