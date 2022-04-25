@@ -4,6 +4,7 @@ from threading import Timer
 import string
 import random
 import os
+import hashlib
 
 SERVER_IP = "127.0.0.1"
 PORT = 8008
@@ -67,6 +68,12 @@ def parse(MESSAGE):
             print("Thank you for participating in our chat bot!")
             exit(0)
     return f"{MESSAGE}"
+
+#a3 alg - part of the RESPONSE(
+def getRES(rand):
+    a_string = str(K) + str(rand)
+    hashed = hashlib.sha256(a_string.encode('utf-8')).hexdigest()
+    return hashed
 
 # Function to Authorize client on typing "log on"
 def authorize():

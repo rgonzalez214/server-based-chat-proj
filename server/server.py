@@ -4,6 +4,7 @@ import datetime
 import random
 import secrets
 import chat_history
+import hashlib
 HOST_IP = "127.0.0.1"
 PORT = 8008
 
@@ -12,23 +13,9 @@ sock = socket.socket(socket.AF_INET, # Internet
 sock.bind((HOST_IP, PORT))
 
 def a3(key, rand):
-    k = key
-    m = random.getrandbits(128)
-    kb = bin(k)[6:]
-    mb = bin(m)[4:]
-    kbl = kb[0:64]
-    kbr = kb[64:]
-    mbl = mb[0:64]
-    mbr = mb[64:]
-    a1 = int(kbl, 2)^int(mbr, 2)
-    a2 = int(kbr, 2)^int(mbl, 2)
-    a3 = a1^a2
-    a4 = bin(a3)[2:].zfill(64)
-    a5 = a4[0:32]
-    a6 = a4[32:]
-    a7 = int(a5, 2)
-    int(a6, 2)
-    return bin(a7)[2:].zfill(len(a5))
+    a_string = str(key) + str(rand)
+    hashed = hashlib.sha256(a_string.encode('utf-8')).hexdigest()
+    return hashed
 
 def rand_num():
     nums = secrets.token_hex(16)
@@ -59,7 +46,6 @@ def findK(ID):
 def authenticate():
     pass
 
-
 def connected():
     pass
 
@@ -86,7 +72,7 @@ def parse(MESSAGE, client_available=None):
     if MESSAGE[0:12] == "CHAT_REQUEST(":
         if client_available:
             print(MESSAGE)
-            chat_started()
+            #chat_started()
         elif not client_available:
             print(MESSAGE)
             unavailable()
@@ -112,6 +98,8 @@ def main():
             key = findK(cID)
             XRES = a3(key,int(rand,16))
             challenge(rand)
+            RES = "" #client answer
+            authenticate(XRES,RES)
         #  sliced message to separate ID
         client_A_ID = str(data[:9], 'utf-8')
 
