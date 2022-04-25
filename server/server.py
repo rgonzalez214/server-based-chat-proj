@@ -1,6 +1,10 @@
 import socket
 import secrets
+import threading
+import logging
+
 import chat_history
+
 HOST_IP = "127.0.0.1"
 UDP_PORT = 8008
 TCP_PORT = 4761
@@ -86,19 +90,19 @@ def end_notif():
     pass
 
 # Function to parse client messages based on message sent by a certain client.
-def parse(MESSAGE, clientAddr):
+def parse(MESSAGE, clientAddr, client_available=True):
 
     if MESSAGE[0:5] == "HELLO":
         rand = challenge(rand_num(), clientAddr, MESSAGE[6:-1])
         response, clientAddr = UDPsocket.recvfrom(1024)  # buffer size is 1024 bytes
-        if str(response[0:8],'utf-8') == "RESPONSE":
-            ID = str(response[9:19],'utf-8')
-            Res = str(response[20:-1],'utf-8')
-            XRES = encryptionAlgorithm(findK(ID), rand)
-            if Res == XRES:
-                auth_success(rand_num(), clientAddr)
-            else:
-                auth_fail(clientAddr)
+    if MESSAGE[0:8] == "RESPONSE":
+        ID = str(response[9:19],'utf-8')
+        Res = str(response[20:-1],'utf-8')
+        XRES = encryptionAlgorithm(findK(ID), rand)
+        if Res == XRES:
+            auth_success(rand_num(), clientAddr)
+        else:
+            auth_fail(clientAddr)
 
     if MESSAGE[0:7] == "CONNECT":
         print(MESSAGE)
@@ -125,17 +129,88 @@ def parse(MESSAGE, clientAddr):
         print(MESSAGE)
         chat_history.read_log("abcd", "efgh")
 
-def main():
-    global UDPsocket
-    print("[STARTING] server is starting...")
-    UDPsocket.bind((HOST_IP, UDP_PORT)) # UDP socket bound
-    print(f"[STARTING] server is running on {HOST_IP}:{UDP_PORT}")
 
-    while True:
-        message, addr = UDPsocket.recvfrom(1024) # buffer size is 1024 bytes
-        print("SERVER-received message: %s" % message)
-        parse(str(message, 'utf-8'), addr)
-        #
+class UDPServer:
+    def __init__(self):
+        logging.info("Initializing UDP Broker")
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Welcoming socket for UDP
+        self.sock.bind((HOST_IP, UDP_PORT))
+        self.clients_list = []
+
+        while True:
+            self.wait_for_client()
+
+    # Wait for a new client to connect
+    def wait_for_client(self):
+        try:
+            # Receive data from client
+            data, client_address = self.sock.recvfrom(1024)
+            logging.info('Received data from client %s: %s', client_address, data)
+
+            # Add client to list of clients
+            if client_address not in self.clients_list:
+                self.clients_list.append(client_address)
+            print(self.clients_list)
+
+            # Handle client request
+            self.handle_request(data, client_address)
+
+        except OSError as err:
+            self.print(err)
+
+    def handle_request(self, data, client_address):
+        resolve_msg = threading.Thread(target=parse(data, client_address))
+        resolve_msg.start()
+
+class TCPServer:
+    def __init__(self):
+        logging.info("Initializing TCP Broker")
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Welcoming socket for UDP
+        self.sock.bind((HOST_IP, TCP_PORT))
+        self.clients_list = []
+
+        while True:
+            self.wait_for_client()
+
+    # Wait for a new client to connect
+    def wait_for_client(self):
+        try:
+            # Receive data from client
+            data, client_address = self.sock.recvfrom(1024)
+            logging.info('Received data from client %s: %s', client_address, data)
+
+            # Add client to list of clients
+            if client_address not in self.clients_list:
+                self.clients_list.append(client_address)
+           logging.info(self.clients_list)
+
+            # Handle client request
+            process_response = threading.Thread(target=parse(data, client_address))
+            process_response.start()
+
+        except OSError as err:
+            self.printwt(err)
+
+
+def main():
+
+    logging.getLogger().setLevel(logging.DEBUG)
+    UDPHandler = threading.Thread(target=UDPServer)
+    TCPHandler = threading.Thread(target=TCPServer)
+
+    UDPHandler.start()
+    TCPHandler.start()
+
+    # global UDPsocket
+    # print("[STARTING] server is starting...")
+    # UDPsocket.bind((HOST_IP, UDP_PORT)) # UDP socket bound
+    # print(f"[STARTING] server is running on {HOST_IP}:{UDP_PORT}")
+    #
+    # while True:
+    #     message, addr = UDPsocket.recvfrom(1024) # buffer size is 1024 bytes
+    #     print("SERVER-received message: %s" % message)
+    #     parse(str(message, 'utf-8'), addr)
+
         # # update client_B_ID--------------------------------
         # client_B_ID = 'client789'
         # print("client-A-ID is: ", client_A_ID)
