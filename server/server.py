@@ -1,13 +1,13 @@
 import socket
+import random
 import secrets
 from common import chat_history
 import hashlib
 HOST_IP = "127.0.0.1"
-PORT = 8008
+UDP_PORT = 8008
+TCP_PORT = 4761
 
-sock = socket.socket(socket.AF_INET, # Internet
-                     socket.SOCK_DGRAM) # UDP
-sock.bind((HOST_IP, PORT))
+UDPsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Welcoming socket for UDP
 
 def a3(key, rand):
     a_string = str(key) + str(rand)
@@ -18,107 +18,131 @@ def rand_num():
     nums = secrets.token_hex(16)
     return nums
 
-
-def challenge(rand):
-    sock.sendto(bytes(rand, "utf-8"), ((HOST_IP, PORT)))
-
 def getID(data):
     id = data[data.find('(')+1:data.find(')')]
-    print(id)
     return id
 
 def findK(ID):
     f1 = open("listofsubscribers.txt","r")
-    IDs = f1.readlines()
-    assigned = 0
-    for newID in IDs:
-        if ID in newID:
-            assigned = 1
-            keys = newID
-            keys = newID[11:-2]
-            return int(keys,16)
-        assigned = 0
+    clients = f1.readlines()
+    found = 0
+    for clientInfo in clients:
+        if ID in clientInfo:
+            found = 1
+            key = clientInfo
+            key = clientInfo[11:-1]
+            return int(key,16)
+        found = 0
     f1.close()
+    if found == 0:
+        print("Could not find Key associated to client!!")
 
-def authenticate():
-    pass
+def challenge(rand, clientAddr, clientID):
+    global UDPsocket
+    # Verify on listofsubs
+    f1 = open("listofsubscribers.txt", "r")
+    clients = f1.readlines()
+    verified = 0
+    for client in clients:
+        if clientID == client[0:10]:
+            verified = 1
+            break
+        verified = 0
+
+    if verified == 1:
+        UDPsocket.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), clientAddr)
+        return rand
+    else:
+        UDPsocket.sendto(bytes("Err:UnverifiedUser", 'utf-8'), clientAddr)
+
+def auth_success(rand_cookie, portnumber, clientAddr):
+    UDPsocket.sendto(bytes(f"AUTH_SUCCESS({rand_cookie},{TCP_PORT})", "utf-8"), clientAddr)
+
+def auth_fail(clientAddr):
+    UDPsocket.sendto(bytes(f"AUTH_FAIL", "utf-8"), clientAddr)
 
 def connected():
     pass
 
+def chat_started():
+    pass
 
 def unavailable():
     pass
-
 
 def end_notif():
     pass
 
 # Function to parse client messages based on message sent by a certain client.
-def parse(MESSAGE, client_available=None):
-    if MESSAGE[0:5] == "HELLO(":
-        print(MESSAGE)
-        challenge()
-    if MESSAGE[0:8] == "RESPONSE(":
-        print(MESSAGE)
-        authenticate()
-    if MESSAGE[0:7] == "CONNECT(":
+def parse(MESSAGE, clientAddr):
+
+    if MESSAGE[0:5] == "HELLO":
+        rand = challenge(rand_num(), clientAddr, MESSAGE[6:-1])
+        response, clientAddr = UDPsocket.recvfrom(1024)  # buffer size is 1024 bytes
+        if str(response[0:8],'utf-8') == "RESPONSE":
+            ID = str(response[9:19],'utf-8')
+            Res = str(response[20:-1],'utf-8')
+            XRES = encryptionAlgorithm(findK(ID), rand)
+            if Res == XRES:
+                auth_success(rand_num(), TCP_PORT, clientAddr)
+            else:
+                auth_fail(clientAddr)
+
+    if MESSAGE[0:7] == "CONNECT":
         print(MESSAGE)
         connected()
+
     # S:Think if to include Client A connected messaged should be parsed through this or not
-    if MESSAGE[0:12] == "CHAT_REQUEST(":
+    if MESSAGE[0:12] == "CHAT_REQUEST":
         if client_available:
             print(MESSAGE)
-            #chat_started()
+            chat_started()
         elif not client_available:
             print(MESSAGE)
             unavailable()
-    if MESSAGE[0:11] == "END_REQUEST(":
+
+    if MESSAGE[0:11] == "END_REQUEST":
         print(MESSAGE)
         end_notif()
-    if MESSAGE[0:4] == "CHAT(":
+
+    if MESSAGE[0:4] == "CHAT":
         print(MESSAGE)
         print("chat_history.write_log()")
-    if MESSAGE[0:11] == "HISTORY_REQ(":
+
+    if MESSAGE[0:11] == "HISTORY_REQ":
         print(MESSAGE)
         chat_history.read_log("abcd", "efgh")
 
 def main():
+    global UDPsocket
     print("[STARTING] server is starting...")
+    UDPsocket.bind((HOST_IP, UDP_PORT)) # UDP socket bound
+    print(f"[STARTING] server is running on {HOST_IP}:{UDP_PORT}")
 
     while True:
-        data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
-        print("SERVER-received message: %s" % data)
-        if "HELLO(" in str(data):
-            rand = rand_num()
-            cID = getID(str(data))
-            key = findK(cID)
-            XRES = a3(key,int(rand,16))
-            challenge(rand)
-            RES = "" #client answer
-            authenticate(XRES,RES)
-        #  sliced message to separate ID
-        client_A_ID = str(data[:9], 'utf-8')
-
-        # update client_B_ID--------------------------------
-        client_B_ID = 'client789'
-        print("client-A-ID is: ", client_A_ID)
-        print("client-B-ID is: ", client_B_ID)
-
-        #  sliced message to separate payload
-        payload = str(data[9:], 'utf-8')
-        print("payload is: ", payload)
-        if payload[:7].lower().strip() == 'history':
-            print(payload[7:].lower().strip())
-            chat_history.read_log(client_A_ID, payload[7:].lower().strip())
-
-        #  sliced message to separate payload
-        if payload[:6].lower() == 'log on':
-            print("initiate log on")
-            connect("CONNECTED")
-        clients= [client_A_ID, client_B_ID]
-        #res = chat_started(clients, payload)
-        #print(res)
+        message, addr = UDPsocket.recvfrom(1024) # buffer size is 1024 bytes
+        print("SERVER-received message: %s" % message)
+        parse(str(message, 'utf-8'), addr)
+        #
+        # # update client_B_ID--------------------------------
+        # client_B_ID = 'client789'
+        # print("client-A-ID is: ", client_A_ID)
+        # print("client-B-ID is: ", client_B_ID)
+        #
+        # #  sliced message to separate payload
+        # payload = str(data[9:], 'utf-8')
+        # print("payload is: ", payload)
+        # if payload[:7].lower().strip() == 'history':
+        #     print(payload[7:].lower().strip())
+        #     chat_history.read_log(client_A_ID, payload[7:].lower().strip())
+        #
+        # #  sliced message to separate payload
+        # if payload[:6].lower() == 'log on':
+        #     print("initiate log on")
+        #     connect("CONNECTED")
+        # clients= [client_A_ID, client_B_ID]
+        # #res = chat_started(clients, payload)
+        # #print(res)
 
 main()
 
