@@ -9,7 +9,7 @@ User sends message
 """
 # designate path to chat history
 # file_path = "history/"
-p = Path("history/")
+p = Path("../server/history/")
 p.mkdir(0o755, True, True)
 
 def file_name(clients):

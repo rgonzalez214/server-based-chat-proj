@@ -1,9 +1,6 @@
 import socket
-import string
-import datetime
-import random
 import secrets
-import chat_history
+from common import chat_history
 import hashlib
 HOST_IP = "127.0.0.1"
 PORT = 8008
