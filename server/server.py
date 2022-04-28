@@ -9,7 +9,7 @@ TCP_PORT = 4761
 
 UDPsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Welcoming socket for UDP
 
-def a3(key, rand):
+def encryptionAlgorithm(key, rand):
     a_string = str(key) + str(rand)
     hashed = hashlib.sha256(a_string.encode('utf-8')).hexdigest()
     return hashed
