@@ -4,12 +4,13 @@ import threading
 import logging
 import chat_history
 
+from common import algorithms
+
 HOST_IP = "127.0.0.1"
 UDP_PORT = 8008
 TCP_PORT = 4761
 
 def send_challenge(rand, clientAddr, clientID, sock):
-
     # Verify on listofsubs
     f1 = open("listofsubscribers.txt", "r")
     clients = f1.readlines()
@@ -71,7 +72,6 @@ class UDPServer:
                 self.clients_list.append(client_address)
             print(self.clients_list)
 
-
             # Handle client request
             self.handle_request(self.sock, data, client_address)
 
@@ -82,7 +82,7 @@ class UDPServer:
         # resolve_msg = threading.Thread(target=parse(data, client_address))
         # resolve_msg.start()
         if data[0:5] == "HELLO":
-            rand = common.algorithms.rand_num()
+            rand = algorithms.rand_num()
             send_challenge(rand, client_address, data[6:-1])
             if rand != 0:
                 for current_client in self.clients_list:
@@ -99,12 +99,12 @@ class UDPServer:
                 else:
                     rand = 0
             if rand != 0:
-                XRES = encryptionAlgorithm(findK(ID), rand)
+                XRES = algorithms.encryptionAlgorithm(algorithms.findK(ID), rand)
             else:
                 print("Error:Random number was not found!")
             # Checking to see if client was authenticated or not
             if Res == XRES:
-                rand_cookie = rand_num()
+                rand_cookie = algorithms.rand_num()
                 auth_success(rand_cookie, client_address)
                 rand_cookie()
             else:
