@@ -2,59 +2,14 @@ import socket
 import secrets
 import threading
 import logging
-
 import chat_history
 
 HOST_IP = "127.0.0.1"
 UDP_PORT = 8008
 TCP_PORT = 4761
 
-UDPsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Welcoming socket for UDP
+def send_challenge(rand, clientAddr, clientID, sock):
 
-def encryptionAlgorithm(key, rand):
-    k = key
-    m = int(rand,16)
-    kb = bin(k)[6:]
-    mb = bin(m)[4:]
-    kbl = kb[0:64]
-    kbr = kb[64:]
-    mbl = mb[0:64]
-    mbr = mb[64:]
-    a1 = int(kbl, 2)^int(mbr, 2)
-    a2 = int(kbr, 2)^int(mbl, 2)
-    a3 = a1^a2
-    a4 = bin(a3)[2:].zfill(64)
-    a5 = a4[0:32]
-    a6 = a4[32:]
-    a7 = int(a5, 2)
-    int(a6, 2)
-    return bin(a7)[2:].zfill(len(a5))
-
-def rand_num():
-    nums = secrets.token_hex(16)
-    return nums
-
-def getID(data):
-    id = data[data.find('(')+1:data.find(')')]
-    return id
-
-def findK(ID):
-    f1 = open("listofsubscribers.txt","r")
-    clients = f1.readlines()
-    found = 0
-    for clientInfo in clients:
-        if ID in clientInfo:
-            found = 1
-            key = clientInfo
-            key = clientInfo[11:-1]
-            return int(key,16)
-        found = 0
-    f1.close()
-    if found == 0:
-        print("Could not find Key associated to client!!")
-
-def challenge(rand, clientAddr, clientID):
-    global UDPsocket
     # Verify on listofsubs
     f1 = open("listofsubscribers.txt", "r")
     clients = f1.readlines()
@@ -66,16 +21,17 @@ def challenge(rand, clientAddr, clientID):
         verified = 0
 
     if verified == 1:
-        UDPsocket.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), clientAddr)
-        return rand
+        sock.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), clientAddr)
+        logging.info('Sending challenge to client %s ', clientAddr)
     else:
-        UDPsocket.sendto(bytes("Err:UnverifiedUser", 'utf-8'), clientAddr)
+        sock.sendto(bytes("Err:UnverifiedUser", 'utf-8'), clientAddr)
+        logging.info('Client %s could not be verified', clientAddr)
 
-def auth_success(rand_cookie, clientAddr):
-    UDPsocket.sendto(bytes(f"AUTH_SUCCESS({rand_cookie},{TCP_PORT})", "utf-8"), clientAddr)
+def auth_success(rand_cookie, sock, client_address):
+    sock.sendto(bytes(f"AUTH_SUCCESS({rand_cookie},{TCP_PORT})", "utf-8"), client_address)
 
-def auth_fail(clientAddr):
-    UDPsocket.sendto(bytes(f"AUTH_FAIL", "utf-8"), clientAddr)
+def auth_fail(sock, client_address):
+    sock.sendto(bytes(f"AUTH_FAIL", "utf-8"), client_address)
 
 def connected():
     pass
@@ -90,45 +46,7 @@ def end_notif():
     pass
 
 # Function to parse client messages based on message sent by a certain client.
-def parse(MESSAGE, clientAddr, client_available=True):
-
-    if MESSAGE[0:5] == "HELLO":
-        rand = challenge(rand_num(), clientAddr, MESSAGE[6:-1])
-        response, clientAddr = UDPsocket.recvfrom(1024)  # buffer size is 1024 bytes
-    if MESSAGE[0:8] == "RESPONSE":
-        ID = str(response[9:19],'utf-8')
-        Res = str(response[20:-1],'utf-8')
-        XRES = encryptionAlgorithm(findK(ID), rand)
-        if Res == XRES:
-            auth_success(rand_num(), clientAddr)
-        else:
-            auth_fail(clientAddr)
-
-    if MESSAGE[0:7] == "CONNECT":
-        print(MESSAGE)
-        connected()
-
-    # S:Think if to include Client A connected messaged should be parsed through this or not
-    if MESSAGE[0:12] == "CHAT_REQUEST":
-        if client_available:
-            print(MESSAGE)
-            chat_started()
-        elif not client_available:
-            print(MESSAGE)
-            unavailable()
-
-    if MESSAGE[0:11] == "END_REQUEST":
-        print(MESSAGE)
-        end_notif()
-
-    if MESSAGE[0:4] == "CHAT":
-        print(MESSAGE)
-        print("chat_history.write_log()")
-
-    if MESSAGE[0:11] == "HISTORY_REQ":
-        print(MESSAGE)
-        chat_history.read_log("abcd", "efgh")
-
+# def parse(MESSAGE, clientAddr, client_available=True):
 
 class UDPServer:
     def __init__(self):
@@ -136,6 +54,7 @@ class UDPServer:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Welcoming socket for UDP
         self.sock.bind((HOST_IP, UDP_PORT))
         self.clients_list = []
+        # self.clients_info = []
 
         while True:
             self.wait_for_client()
@@ -152,15 +71,68 @@ class UDPServer:
                 self.clients_list.append(client_address)
             print(self.clients_list)
 
+
             # Handle client request
-            self.handle_request(data, client_address)
+            self.handle_request(self.sock, data, client_address)
 
         except OSError as err:
             self.print(err)
 
-    def handle_request(self, data, client_address):
-        resolve_msg = threading.Thread(target=parse(data, client_address))
-        resolve_msg.start()
+    def handle_request(self, sock, data, client_address):
+        # resolve_msg = threading.Thread(target=parse(data, client_address))
+        # resolve_msg.start()
+        if data[0:5] == "HELLO":
+            rand = common.algorithms.rand_num()
+            send_challenge(rand, client_address, data[6:-1])
+            if rand != 0:
+                for current_client in self.clients_list:
+                    if client_address == current_client:
+                        self.clients_list[current_client] += rand
+        if data[0:8] == "RESPONSE":
+            ID = str(data[9:19], 'utf-8')
+            Res = str(data[20:-1], 'utf-8')
+            rand = 0
+            XRES = 0
+            for current_client in self.clients_list:
+                if client_address == current_client:
+                    rand = self.clients_list[current_client][3]
+                else:
+                    rand = 0
+            if rand != 0:
+                XRES = encryptionAlgorithm(findK(ID), rand)
+            else:
+                print("Error:Random number was not found!")
+            # Checking to see if client was authenticated or not
+            if Res == XRES:
+                rand_cookie = rand_num()
+                auth_success(rand_cookie, client_address)
+                rand_cookie()
+            else:
+                auth_fail(client_address)
+        if data[0:7] == "CONNECT":
+            print(data)
+            connected()
+
+        # S:Think if to include Client A connected messaged should be parsed through this or not
+        if data[0:12] == "CHAT_REQUEST":
+            # if client_available:
+            #     print(MESSAGE)
+            chat_started()
+            # elif not client_available:
+            #     print(MESSAGE)
+            #     unavailable()
+
+        if data[0:11] == "END_REQUEST":
+            # print(MESSAGE)
+            end_notif()
+
+        if data[0:4] == "CHAT":
+            # print(MESSAGE)
+            print("chat_history.write_log()")
+
+        if data[0:11] == "HISTORY_REQ":
+            # print(MESSAGE)
+            chat_history.read_log("abcd", "efgh")
 
 class TCPServer:
     def __init__(self):
@@ -182,7 +154,7 @@ class TCPServer:
             # Add client to list of clients
             if client_address not in self.clients_list:
                 self.clients_list.append(client_address)
-           logging.info(self.clients_list)
+            logging.info(self.clients_list)
 
             # Handle client request
             process_response = threading.Thread(target=parse(data, client_address))

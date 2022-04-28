@@ -1,30 +1,13 @@
 import socket
 import time
 from threading import Timer
+import logging
 
 SERVER_IP = "127.0.0.1"
 PORT = 8008
 ID = ""
 K = ""
 
-def encryptionAlgorithm(key, rand):
-    k = int(key,16)
-    m = int(rand,16)
-    kb = bin(k)[6:]
-    mb = bin(m)[4:]
-    kbl = kb[0:64]
-    kbr = kb[64:]
-    mbl = mb[0:64]
-    mbr = mb[64:]
-    a1 = int(kbl, 2)^int(mbr, 2)
-    a2 = int(kbr, 2)^int(mbl, 2)
-    a3 = a1^a2
-    a4 = bin(a3)[2:].zfill(64)
-    a5 = a4[0:32]
-    a6 = a4[32:]
-    a7 = int(a5, 2)
-    int(a6, 2)
-    return bin(a7)[2:].zfill(len(a5))
 
 # Function to assign each client an ID which is not part of usedClientIDs (currently active clients)
 def AssignIDandKey():
@@ -52,17 +35,9 @@ def AssignIDandKey():
         print("Could not assign ID, too many users! Please try again later. No free lunch in Life :)\n")
         return "InvalidUser"  # can still type ID is just set to invalid user
 
-# Function to print server timeout response in case server takes too long to responnd
-def timeout():
-    print("Server did not respond, timed out... Try re-logging again.")
-
 # Function to Authorize client on typing "log on"
 def authorize():
-    challenge_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
-    response_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
-    AUTH_SUCCESS = 1
-    AUTH_FAIL = 0
+
     # Sending HELLO(Client-ID) to server
     print("Connection established! Attempting Handshake...")
     sock.sendto(bytes(f"HELLO({ID})", 'utf-8'), (SERVER_IP, PORT))
@@ -71,7 +46,7 @@ def authorize():
     challenge_timeout.start()
     challenge, addr = sock.recvfrom(1024)
     challenge_timeout.cancel()
-
+    logging.info(challenge)
     # Checking for CHALLENGE success
     if str(challenge,'utf-8') != "Err:UnverifiedUser":
         print("Authenticating User...")
@@ -109,6 +84,7 @@ def main():
     global ID
     global K
     ID, K = AssignIDandKey()
+    logging.getLogger().setLevel(logging.DEBUG)
 
     # Opening a Socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
@@ -116,6 +92,7 @@ def main():
     # Loop to parse through each message from the client
     while True:
         parse(input(f"{ID} > ").lower())
+
         # sock.sendto(MESSAGE, (SERVER_IP, PORT))
         # REPLY = sock.recvfrom(1024)
         # print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))
