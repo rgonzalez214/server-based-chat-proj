@@ -47,6 +47,14 @@ def send_unavailable():
 def send_end_notif():
     pass
 
+class Client:
+    def __init__(self, client_address):
+        self.client_address = None
+        self.client_id = None
+        self.XRES = None
+        self.stage = 0
+
+
 class UDPServer:
     def __init__(self):
         logging.info("Initializing UDP Broker")
@@ -66,18 +74,20 @@ class UDPServer:
             logging.info('Received data from client %s: %s', client_address, data)
 
             # Add client to list of clients
-            if client_address not in self.clients_list:
-                self.clients_list.append(client_address)
+            for any_client in self.clients_list:
+                if any_client.client_address != client_address:
+                    self.clients_list.append(Client(client_address))
+
             print(self.clients_list)
 
             # Handle client request
-            process_response = threading.Thread(target=self.handle_request(data, client_address))
+            process_response = threading.Thread(target=self.handle_client(data, client_address))
             process_response.start()
 
-        except OSError as err:
-            self.print(err)
+        except OSError:
+            print("OSError in UDP Server")
 
-    def handle_request(self, data, client_address):
+    def handle_client(self, data, client_address):
         # resolve_msg = threading.Thread(target=parse(data, client_address))
         # resolve_msg.start()
         data = str(data, 'utf-8')
@@ -106,10 +116,26 @@ class UDPServer:
             # Checking to see if client was authenticated or not
             if Res == XRES:
                 rand_cookie = algorithms.rand_num()
-                send_auth_success(rand_cookie, client_address)
+                send_auth_success(rand_cookie, self.sock, client_address)
                 rand_cookie()
             else:
-                send_auth_fail(client_address)
+                send_auth_fail(self.sock, client_address)
+
+
+class TCPServer:
+    def __init__(self):
+        logging.info("Initializing TCP Broker")
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Welcoming socket for TCP
+        self.sock.bind((HOST_IP, TCP_PORT))
+        self.sock.listen()
+        self.clients_list = []
+
+        while True:
+            data, client_address = self.sock.accept()
+            process_response = threading.Thread(target=self.handle_client(data, client_address))
+            process_response.start()
+
+    def handle_client(self, data, client_address):
         if data[0:7] == "CONNECT":
             print(data)
             send_connected()
@@ -134,35 +160,6 @@ class UDPServer:
         if data[0:11] == "HISTORY_REQ":
             # print(MESSAGE)
             chat_history.read_log("abcd", "efgh")
-
-class TCPServer:
-    def __init__(self):
-        logging.info("Initializing TCP Broker")
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Welcoming socket for UDP
-        self.sock.bind((HOST_IP, TCP_PORT))
-        self.clients_list = []
-
-        while True:
-            self.wait_for_client()
-
-    # Wait for a new client to connect
-    def wait_for_client(self):
-        try:
-            # Receive data from client
-            data, client_address = self.sock.recvfrom(1024)
-            logging.info('Received data from client %s: %s', client_address, data)
-
-            # Add client to list of clients
-            if client_address not in self.clients_list:
-                self.clients_list.append(client_address)
-            logging.info(self.clients_list)
-
-            # Handle client request
-            process_response = threading.Thread(target=parse(data, client_address))
-            process_response.start()
-
-        except OSError as err:
-            self.printwt(err)
 
 
 def main():
