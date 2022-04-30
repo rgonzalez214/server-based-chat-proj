@@ -35,8 +35,8 @@ def send_auth_success(rand_cookie, sock, client_address):
 def send_auth_fail(sock, client_address):
     sock.sendto(bytes(f"AUTH_FAIL", "utf-8"), client_address)
 
-def send_connected():
-    pass
+def send_connected(sock):
+    sock.sendto(bytes("CONNECTED TO SERVER", "utf-8"))
 
 def send_chat_started():
     pass
@@ -120,6 +120,19 @@ class UDPServer:
                 rand_cookie()
             else:
                 send_auth_fail(self.sock, client_address)
+        #CONNECT(rand_cookie) received
+        if data[0:9] == "CONNECTED":
+            send_connected(self.sock)
+        #CHAT_RESQUESTED(Client_ID-?)
+        if data[0:15] == "CHAT_REQUESTED":
+            #get client-id
+            data[16:]
+            #check if client-id is online
+            #if connected CHAT_STARTED(session-ID, CLient-id)
+            #else UNREACHABLE(client-id)
+            pass
+
+
 
 
 class TCPServer:
