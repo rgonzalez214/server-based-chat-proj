@@ -3,6 +3,8 @@ import time
 from threading import Timer
 import logging
 
+from common import algorithms
+
 SERVER_IP = "127.0.0.1"
 PORT = 8008
 ID = ""
@@ -36,29 +38,30 @@ def AssignIDandKey():
         return "InvalidUser"  # can still type ID is just set to invalid user
 
 # Function to Authorize client on typing "log on"
-def authorize():
-
+def authorize(sock):
     # Sending HELLO(Client-ID) to server
     print("Connection established! Attempting Handshake...")
     sock.sendto(bytes(f"HELLO({ID})", 'utf-8'), (SERVER_IP, PORT))
+    logging.info("Sending HELLO(%s) to server", ID)
 
     # Waiting for CHALLENGE(rand) from server
-    challenge_timeout.start()
     challenge, addr = sock.recvfrom(1024)
-    challenge_timeout.cancel()
-    logging.info(challenge)
+    logging.info("Received %s from server", challenge)
+
     # Checking for CHALLENGE success
     if str(challenge,'utf-8') != "Err:UnverifiedUser":
         print("Authenticating User...")
         challenge = str(challenge[10:-1], 'utf-8')
-        sock.sendto(bytes(f"RESPONSE({ID},{encryptionAlgorithm(K, challenge)})", 'utf-8'), (SERVER_IP, PORT))
+        sock.sendto(bytes(f"RESPONSE({ID},{algorithms.encryptionAlgorithm(K, challenge)})", 'utf-8'), (SERVER_IP, PORT))
 
         # Waiting for AUTHENTICATION from server
-        response_timeout.start()
         response, addr = sock.recvfrom(1024)
-        response_timeout.cancel()
         if str(response[0:12], 'utf-8') == "AUTH_SUCCESS":
             print("Successfully Authenticated!")
+            response = response.split(',')
+            rand_cookie = response[1][13:]
+            TCP_PORT = response[2][:-1]
+            print(rand_cookie, TCP_PORT)
             print("Welcome to the Chat Server.\n")
         elif str(response[0:9], 'utf-8') == "AUTH_FAIL":
             print("User could not be Authenticated... Please try again with valid credentials")
@@ -68,11 +71,11 @@ def authorize():
 
 
 # Function to parse each message input by the client to do respective functions
-def parse(input):
+def parse(input, sock):
     # Match case to non-character sensitive message
     if input == "log on":
             print("\nPlease wait while we are trying to establish a connection to the chat server...")
-            authorize()
+            authorize(sock)
 
     if input == "log off":
             print("Thank you for participating in our chat bot!")
@@ -91,7 +94,7 @@ def main():
 
     # Loop to parse through each message from the client
     while True:
-        parse(input(f"{ID} > ").lower())
+        parse(input(f"{ID} > ").lower(), sock)
 
         # sock.sendto(MESSAGE, (SERVER_IP, PORT))
         # REPLY = sock.recvfrom(1024)
