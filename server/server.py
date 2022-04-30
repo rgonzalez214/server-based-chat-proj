@@ -18,10 +18,8 @@ def send_challenge(rand, clientAddr, clientID, sock):
     for client in clients:
         if clientID == client[0:10]:
             verified = 1
-            print(clientID)
             break
         verified = 0
-    print(clients)
     if verified == 1:
         sock.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), clientAddr)
         logging.info('Sending challenge to client %s ', clientAddr)
@@ -54,6 +52,23 @@ class Client:
         self.XRES = None
         self.stage = 0
 
+    # Getters
+    def get_client_address(self):
+        return self.client_address
+
+    def get_client_id(self):
+        return self.client_id
+
+    def get_XRES(self):
+        return self.XRES
+
+    # Setters
+    def set_client_id(self, client_id):
+        self.client_id = client_id
+
+    def set_XRES(self, XRES):
+        self.XRES = XRES
+
 
 class UDPServer:
     def __init__(self):
@@ -61,7 +76,6 @@ class UDPServer:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Welcoming socket for UDP
         self.sock.bind((HOST_IP, UDP_PORT))
         self.clients_list = []
-        # self.clients_info = []
 
         while True:
             self.wait_for_client()
@@ -74,11 +88,14 @@ class UDPServer:
             logging.info('Received data from client %s: %s', client_address, data)
 
             # Add client to list of clients
-            for any_client in self.clients_list:
-                if any_client.client_address != client_address:
-                    self.clients_list.append(Client(client_address))
+            if self.clients_list == []:
+                self.clients_list.append(Client(client_address))
+            else:
+                for any_client in self.clients_list:
+                    if any_client.client_address != client_address:
+                        self.clients_list.append(Client(client_address))
 
-            print(self.clients_list)
+            logging.info(self.clients_list)
 
             # Handle client request
             process_response = threading.Thread(target=self.handle_client(data, client_address))
@@ -94,10 +111,12 @@ class UDPServer:
         if data[0:5] == "HELLO":
             rand = algorithms.rand_num()
             send_challenge(rand, client_address, data[6:-1], self.sock)
-            if rand != 0:
-                for id, current_client in enumerate(self.clients_list):
-                    if client_address == current_client:
-                        self.clients_list[id] += rand
+            XRES = algorithms.encryptionAlgorithm(data[6:-1], rand)
+            for specific_client in self.clients_list:
+                if specific_client.get_client_address() == client_address:
+                    specific_client.set_XRES(XRES)
+                    logging.info(XRES)
+                    print(specific_client.XRES)
         if data[0:8] == "RESPONSE":
 
             ID = data[9:19]
