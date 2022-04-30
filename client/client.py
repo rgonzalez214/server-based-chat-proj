@@ -68,7 +68,8 @@ def authorize(sock):
     else:
         print(f"{challenge}: Try re-logging again.")
 
-
+def chat_request(Client_ID_X):
+    pass
 
 # Function to parse each message input by the client to do respective functions
 def parse(input, sock):
@@ -80,6 +81,10 @@ def parse(input, sock):
     if input == "log off":
             print("Thank you for participating in our chat bot!")
             exit(0)
+
+    if "Chat Client-ID-" in input:
+        print(f"\nRequesting chat session with ", input[5:16])
+        chat_request(input[5:16])
     return input
 
 
