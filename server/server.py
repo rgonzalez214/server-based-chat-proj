@@ -2,6 +2,8 @@ import socket
 import secrets
 import threading
 import logging
+from encodings.base64_codec import base64_encode
+
 import chat_history
 
 from cryptography.fernet import Fernet
@@ -23,7 +25,7 @@ def send_auth_fail(sock, currentClient):
     logging.info('Sending AUTH_FAIL to client %s ', currentClient.client_address)
     sock.sendto(bytes(f"AUTH_FAIL", "utf-8"), currentClient.client_address)
 
-def send_connected(sock):
+def send_connected(sock, currentClient):
     logging.info('Sending CONNECTED to client %s ', currentClient.client_address)
     sock.sendto(bytes("CONNECTED TO SERVER", "utf-8"))
 
@@ -41,10 +43,13 @@ class Client:
         self.client_address = client_address
         self.client_id = None
         self.secret_key = None
-        self.encryption_key = None
+        self.ciphering_key = None
         self.rand = None
         self.XRES = None
         self.session_ID = None
+
+    def set_client_id(self, clientID):
+        self.client_id = clientID
 
 class UDPServer:
     def __init__(self):
@@ -55,6 +60,9 @@ class UDPServer:
 
         while True:
             self.wait_for_client()
+
+    def returnClient(self, client_address):
+        client_address
 
     # Wait for a new client to connect
     def wait_for_client(self):
@@ -73,6 +81,7 @@ class UDPServer:
                 client_exists = False
                 for i, each_client in enumerate(self.clients_list):
                     if newClient.client_address == each_client.client_address:
+                        newClient = self.clients_list[i]
                         client_exists = True
                         break
 
@@ -107,12 +116,22 @@ class UDPServer:
 
         # RESPONSE(Res) received
         if data[0:8] == "RESPONSE":
-            if current_client.XRES != data[9:-1]:
+            data = data.split(",")
+            if current_client.client_id != data[0][9:] or current_client.XRES != data[1][:-1]:
                 send_auth_fail(self.sock, current_client)
             else:
-                current_client.encryption_key = algorithms.a8(current_client.rand, current_client.secret_key)
-                fernet = Fernet(current_client.encryption_key)
+                current_client.ciphering_key, size = base64_encode(bytes(algorithms.a8(current_client.rand, current_client.secret_key), 'utf-8'))
+                fernet = Fernet(current_client.ciphering_key)
                 send_auth_success(self.sock, current_client, fernet)
+
+        self.updateClient(current_client)
+
+    def updateClient(self, newClient):
+        for i, currentClient in enumerate(self.clients_list):
+            if currentClient.client_address == newClient.client_address:
+                self.clients_list[i] = newClient
+                break
+
 
 class TCPServer:
     def __init__(self):
@@ -129,7 +148,6 @@ class TCPServer:
 
     def handle_client(self, data, client_address):
         if data[0:7] == "CONNECT":
-            print(data)
             send_connected()
 
         # S:Think if to include Client A connected messaged should be parsed through this or not
