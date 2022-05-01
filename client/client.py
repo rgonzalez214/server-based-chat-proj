@@ -28,63 +28,16 @@ def AssignIDandKey():
         return "InvalidUser", None
 
 # Function to Authorize client on typing "log on"
-def send_hello(sock):
+def send_hello(sock, client_id):
     logging.info("Sending HELLO to server")
-    sock.sendto(bytes(f"HELLO({ID})", 'utf-8'), (SERVER_IP, PORT))
+    sock.sendto(bytes(f"HELLO({client_id})", 'utf-8'), (SERVER_IP, PORT))
 
-def send_challenge(sock):
-    sock.sendto(bytes(f"RESPONSE({ID},{algorithms.encryptionAlgorithm(K, challenge)})", 'utf-8'), (SERVER_IP, PORT))
-
-    # Waiting for AUTHENTICATION from server
-    response, addr = sock.recvfrom(1024)
-    if str(response[0:12], 'utf-8') == "AUTH_SUCCESS":
-        print("Successfully Authenticated!")
-        response = response.split(',')
-        rand_cookie = response[1][13:]
-        TCP_PORT = response[2][:-1]
-        print(rand_cookie, TCP_PORT)
-        print("Welcome to the Chat Server.\n")
-    elif str(response[0:9], 'utf-8') == "AUTH_FAIL":
-        print("User could not be Authenticated... Please try again with valid credentials")
+def send_response(sock, client_id, Res):
+    sock.sendto(bytes(f"RESPONSE({client_id},{Res})", 'utf-8'), (SERVER_IP, PORT))
 
 def chat_request(Client_ID_X):
     pass
 
-# Function to parse each message input by the client to do respective functions
-def Parser(client_input):
-
-    if input == "log on":
-        # Sending HELLO(Client-ID) to the server
-        print("Logging in to server...")
-        send_hello(sock)
-
-        # Waiting for CHALLENGE(rand) from server
-        challenge, addr = sock.recvfrom(1024)
-        challenge = str(challenge, 'utf-8')
-        logging.info("Received CHALLENGE from server")
-
-        if challenge[10:-1] == CHALLENGE:
-
-        # Waiting for AUTHENTICATION from server
-        response, addr = sock.recvfrom(1024)
-        if str(response[0:12], 'utf-8') == "AUTH_SUCCESS":
-            print("Successfully Authenticated!")
-            response = response.split(',')
-            rand_cookie = response[1][13:]
-            TCP_PORT = response[2][:-1]
-            print(rand_cookie, TCP_PORT)
-            print("Welcome to the Chat Server.\n")
-        elif str(response[0:9], 'utf-8') == "AUTH_FAIL":
-            print("User could not be Authenticated... Please try again with valid credentials")
-
-    if input == "log off":
-            print("Thank you for participating in our chat bot!")
-            exit(0)
-
-    if "Chat Client-ID-" in input:
-        print(f"\nRequesting chat session with ", input[5:16])
-        chat_request(input[5:16])
-    return input
 
 class Client:
     def __init__(self):
@@ -105,9 +58,21 @@ class Client:
             process_input.start()
             # Output buffered messages after receiving client input
 
-    # Parses Client Input
+    # Function to parse each message input by the client into protocol messages
     def Parser(self, client_input):
-        pass
+        if client_input == "log on":
+            # Sending HELLO(Client-ID) to the server
+            print("Logging in to server...")
+            send_hello(self.sock)
+
+        if input == "log off":
+            print("Exiting Program")
+            print("Thank you for participating in our chat bot!")
+            exit(0)
+
+        if "Chat Client-ID-" in input:
+            print(f"\nRequesting chat session with ", input[5:16])
+            chat_request(input[5:16])
 
     # Driver function for receiving UDP/TCP Protocol messages
     def Receiver(self):
@@ -126,7 +91,22 @@ class Client:
     # Processes UDP/TCP Protocol messages
     # Changes protocol / Terminates Client
     def Processor(self, data):
-        pass
+        if str(data[0:9],'utf-8') == "CHALLENGE":
+            self.rand = str(data[10:-1],'utf-8')
+            # Fix Response processing by the server
+            self.Res = algorithms.a3(self.rand, self.secret_key)
+            send_response(self.sock, self.client_id, self.Res)
+        elif str(data[0:9],'utf-8') == "AUTH_FAIL":
+            print("User could not be Authenticated... Please try again with valid credentials")
+        elif
+                        "AUTH_SUCCESS":
+            print("Successfully Authenticated!")
+            response = response.split(',')
+            rand_cookie = response[1][13:]
+            TCP_PORT = response[2][:-1]
+            print(rand_cookie, TCP_PORT)
+            print("Welcome to the Chat Server.\n")
+        elif str(response[0:9], 'utf-8') == "AUTH_FAIL":
 
 def main():
 

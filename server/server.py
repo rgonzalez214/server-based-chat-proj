@@ -87,7 +87,6 @@ class UDPServer:
 
     def handle_client(self, data, current_client):
         data = str(data, 'utf-8')
-
         # HELLO(Client-ID) Received
         if data[0:5] == "HELLO":
             current_client.client_id = data[6:-1]
