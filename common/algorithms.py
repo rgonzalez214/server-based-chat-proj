@@ -2,13 +2,14 @@ import hashlib
 import secrets
 
 #a3
-def encryptionAlgorithm(key, rand):
-    a_string = str(key) + str(rand)
-    hashed = hashlib.sha256(a_string.encode('utf-8')).hexdigest()
+def a3(rand, key):
+    combo = str(rand) + str(key)
+    print(rand, key,"ok", combo)
+    hashed = hashlib.sha256(combo.encode('utf-8')).hexdigest()
     return hashed
 
-def a8(rand, K_A):
-    combo = str(rand) + str(K_A)
+def a8(rand, key):
+    combo = str(rand) + str(key)
     hashed = hashlib.sha256(combo.encode('utf-8')).hexdigest()
     return hashed
 
@@ -20,17 +21,24 @@ def getID(data):
     id = data[data.find('(')+1:data.find(')')]
     return id
 
-def findK(ID):
+def findSecretKey(clientID):
     f1 = open("listofsubscribers.txt","r")
     clients = f1.readlines()
-    found = 0
+    Found = False
     for clientInfo in clients:
-        if ID in clientInfo:
-            found = 1
-            key = clientInfo
-            key = clientInfo[11:-1]
-            return int(key,16)
-        found = 0
-    f1.close()
-    if found == 0:
-        print("Could not find Key associated to client!!")
+        if clientID in clientInfo:
+            Found = True
+            return int(clientInfo[11:-1],16)
+    if not Found:
+        return -1
+
+def verify(clientID):
+    # Verify if a client is on the list of subscribers
+    f1 = open("listofsubscribers.txt", "r")
+    clients = f1.readlines()
+    Verified = False
+    for client in clients:
+        if clientID == client[0:10]:
+            Verified = True
+            break
+    return Verified
