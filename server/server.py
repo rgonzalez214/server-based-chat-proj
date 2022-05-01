@@ -4,37 +4,27 @@ import threading
 import logging
 import chat_history
 
+from cryptography.fernet import Fernet
 from common import algorithms
 
 HOST_IP = "127.0.0.1"
 UDP_PORT = 8008
 TCP_PORT = 4761
 
-def send_challenge(rand, clientAddr, clientID, sock):
-    # Verify on listofsubs
-    f1 = open("listofsubscribers.txt", "r")
-    clients = f1.readlines()
-    verified = 0
-    for client in clients:
-        if clientID == client[0:10]:
-            verified = 1
-            break
-        verified = 0
+def send_challenge(sock, currentClient, rand):
+    logging.info('Sending CHALLENGE to client %s ', currentClient.client_address)
+    sock.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), currentClient.client_address)
 
-    if verified == 1:
-        sock.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), clientAddr)
-        logging.info('Sending challenge to client %s ', clientAddr)
-    else:
-        sock.sendto(bytes("Err:UnverifiedUser", 'utf-8'), clientAddr)
-        logging.info('Client %s could not be verified', clientAddr)
+def send_auth_success(sock, currentClient, fernet):
+    logging.info('Sending AUTH_SUCCESS to client %s ', currentClient.client_address)
+    sock.sendto(fernet.encrypt(bytes(f"AUTH_SUCCESS({currentClient.rand},{TCP_PORT})", "utf-8")), currentClient.client_address)
 
-def send_auth_success(rand_cookie, sock, client_address):
-    sock.sendto(bytes(f"AUTH_SUCCESS({rand_cookie},{TCP_PORT})", "utf-8"), client_address)
-
-def send_auth_fail(sock, client_address):
-    sock.sendto(bytes(f"AUTH_FAIL", "utf-8"), client_address)
+def send_auth_fail(sock, currentClient):
+    logging.info('Sending AUTH_FAIL to client %s ', currentClient.client_address)
+    sock.sendto(bytes(f"AUTH_FAIL", "utf-8"), currentClient.client_address)
 
 def send_connected(sock):
+    logging.info('Sending CONNECTED to client %s ', currentClient.client_address)
     sock.sendto(bytes("CONNECTED TO SERVER", "utf-8"))
 
 def send_chat_started():
@@ -48,28 +38,13 @@ def send_end_notif():
 
 class Client:
     def __init__(self, client_address):
-        self.client_address = None
+        self.client_address = client_address
         self.client_id = None
+        self.secret_key = None
+        self.encryption_key = None
+        self.rand = None
         self.XRES = None
-        self.stage = 0
-
-    # Getters
-    def get_client_address(self):
-        return self.client_address
-
-    def get_client_id(self):
-        return self.client_id
-
-    def get_XRES(self):
-        return self.XRES
-
-    # Setters
-    def set_client_id(self, client_id):
-        self.client_id = client_id
-
-    def set_XRES(self, XRES):
-        self.XRES = XRES
-
+        self.session_ID = None
 
 class UDPServer:
     def __init__(self):
@@ -86,74 +61,63 @@ class UDPServer:
         try:
             # Receive data from client
             data, client_address = self.sock.recvfrom(1024)
-            logging.info('Received data from client %s: %s', client_address, data)
+            newClient = Client(client_address)
+            logging.info('Received data from client %s: %s', newClient.client_address, data)
 
             # Add client to list of clients
             if self.clients_list == []:
-                self.clients_list.append(Client(client_address))
+                self.clients_list.append(newClient)
+                logging.info("New Client Connection Registered")
             else:
-                for any_client in self.clients_list:
-                    if any_client.client_address != client_address:
-                        self.clients_list.append(Client(client_address))
+                # Checking to see if the client exists on the current list of clients or not
+                client_exists = False
+                for i, each_client in enumerate(self.clients_list):
+                    if newClient.client_address == each_client.client_address:
+                        client_exists = True
+                        break
 
-            logging.info(self.clients_list)
+                if not client_exists:
+                    self.clients_list.append(newClient)
+                    logging.info("New Client Connection Registered")
 
-            # Handle client request
-            process_response = threading.Thread(target=self.handle_client(data, client_address))
+            process_response = threading.Thread(target=self.handle_client(data, newClient))
             process_response.start()
-
         except OSError:
             print("OSError in UDP Server")
 
-    def handle_client(self, data, client_address):
-        # resolve_msg = threading.Thread(target=parse(data, client_address))
-        # resolve_msg.start()
+    def handle_client(self, data, current_client):
         data = str(data, 'utf-8')
-        if data[0:5] == "HELLO":
-            rand = algorithms.rand_num()
-            send_challenge(rand, client_address, data[6:-1], self.sock)
-            XRES = algorithms.encryptionAlgorithm(data[6:-1], rand)
-            for specific_client in self.clients_list:
-                if specific_client.get_client_address() == client_address:
-                    specific_client.set_XRES(XRES)
-                    logging.info(XRES)
-                    print(specific_client.XRES)
-        if data[0:8] == "RESPONSE":
 
-            ID = data[9:19]
-            Res = data[20:-1]
-            rand = 0
-            XRES = 0
-            for id, current_client in enumerate(self.clients_list):
-                if client_address == current_client:
-                    rand = self.clients_list[id][3]
+        # HELLO(Client-ID) Received
+        if data[0:5] == "HELLO":
+            current_client.client_id = data[6:-1]
+            # Verify if the client is on the list of Subscribers
+            if algorithms.verify(current_client.client_id):
+                # Find Client Secret Key
+                current_client.secret_key = algorithms.findSecretKey(current_client.client_id)
+                if current_client.secret_key == -1:
+                    logging.info(f"{current_client.client_id}: Could not find client Secret Key!")
                 else:
-                    rand = 0
-            if rand != 0:
-                XRES = algorithms.encryptionAlgorithm(algorithms.findK(ID), rand)
+                    # Client verified and secret key obtained
+                    # Generate a random number, generate XRES and send client the CHALLENGE
+                    current_client.rand = algorithms.rand_num()
+                    current_client.XRES = algorithms.a3(current_client.rand, current_client.secret_key)
+                    send_challenge(self.sock, current_client, current_client.rand)
             else:
-                print("Error:Random number was not found!")
-            # Checking to see if client was authenticated or not
-            if Res == XRES:
-                rand_cookie = algorithms.rand_num()
-                send_auth_success(rand_cookie, self.sock, client_address)
-                rand_cookie()
+                logging.info(f"{current_client.client_id}: Could not verify client!")
+
+        # RESPONSE(Res) received
+        if data[0:8] == "RESPONSE":
+            if current_client.XRES != data[9:-1]:
+                send_auth_fail(self.sock, current_client)
             else:
-                send_auth_fail(self.sock, client_address)
-        #CONNECT(rand_cookie) received
+                current_client.encryption_key = algorithms.a8(current_client.rand, current_client.secret_key)
+                fernet = Fernet(current_client.encryption_key)
+                send_auth_success(self.sock, current_client, fernet)
+
+        # CONNECT(rand_cookie) received
         if data[0:9] == "CONNECTED":
             send_connected(self.sock)
-        #CHAT_RESQUESTED(Client_ID-?)
-        if data[0:15] == "CHAT_REQUESTED":
-            #get client-id
-            data[16:]
-            #check if client-id is online
-            #if connected CHAT_STARTED(session-ID, CLient-id)
-            #else UNREACHABLE(client-id)
-            pass
-
-
-
 
 class TCPServer:
     def __init__(self):
