@@ -4,6 +4,8 @@ import time
 from threading import Timer
 import logging
 
+from cryptography.fernet import Fernet
+
 from common import algorithms
 
 SERVER_IP = "127.0.0.1"
@@ -43,7 +45,9 @@ class Client:
     def __init__(self):
         self.client_id, self.secret_key = AssignIDandKey()
         self.rand = None
+        self.rand_cookie = None
         self.Res = None
+        self.ciphering_key = None
         self.protocol = "UDP"
         self.sock =  socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.recv_buffer = ""
@@ -91,22 +95,36 @@ class Client:
     # Processes UDP/TCP Protocol messages
     # Changes protocol / Terminates Client
     def Processor(self, data):
+
+        # CHALLENGE(rand) received
         if str(data[0:9],'utf-8') == "CHALLENGE":
             self.rand = str(data[10:-1],'utf-8')
             # Fix Response processing by the server
             self.Res = algorithms.a3(self.rand, self.secret_key)
             send_response(self.sock, self.client_id, self.Res)
+            self.ciphering_key = algorithms.a8(self.rand, self.secret_key)
+
+        # AUTH_FAIL received
         elif str(data[0:9],'utf-8') == "AUTH_FAIL":
             print("User could not be Authenticated... Please try again with valid credentials")
-        elif
-                        "AUTH_SUCCESS":
-            print("Successfully Authenticated!")
-            response = response.split(',')
-            rand_cookie = response[1][13:]
-            TCP_PORT = response[2][:-1]
-            print(rand_cookie, TCP_PORT)
+
+        # Decrypting hashed messages
+        elif self.ciphering_key != None:
+            fernet = Fernet(self.ciphering_key)
+            data = fernet.decrypt(data)
+
+            if str(data[0:12],'utf-8') == "AUTH_SUCCESS":
+                print("Successfully Authenticated!")
+                data = str(data,'utf-8').split(",")
+                print(data)
+                # rand_cookie = data[1][13:]
+                # TCP_PORT = response[2][:-1]
+                # print(rand_cookie, TCP_PORT)
             print("Welcome to the Chat Server.\n")
-        elif str(response[0:9], 'utf-8') == "AUTH_FAIL":
+
+        # Garbage Output by server
+        else:
+            print("Server sent garbage: %s", str(data,'utf-8'))
 
 def main():
 
