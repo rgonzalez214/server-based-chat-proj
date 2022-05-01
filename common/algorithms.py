@@ -5,7 +5,7 @@ import secrets
 def a3(rand, key):
     combo = str(rand) + str(key)
     print(rand, key,"ok", combo)
-    hashed = hashlib.sha256(combo.encode('utf-8')).hexdigest()
+    hashed = hashlib.sha1(combo.encode('utf-8')).hexdigest()
     return hashed
 
 def a8(rand, key):

@@ -115,10 +115,6 @@ class UDPServer:
                 fernet = Fernet(current_client.encryption_key)
                 send_auth_success(self.sock, current_client, fernet)
 
-        # CONNECT(rand_cookie) received
-        if data[0:9] == "CONNECTED":
-            send_connected(self.sock)
-
 class TCPServer:
     def __init__(self):
         logging.info("Initializing TCP Broker")
