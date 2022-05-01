@@ -3,27 +3,32 @@ import random
 import secrets
 from common import chat_history
 import hashlib
+
 HOST_IP = "127.0.0.1"
 UDP_PORT = 8008
 TCP_PORT = 4761
 
-UDPsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Welcoming socket for UDP
+UDPsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Welcoming socket for UDP
+
 
 def encryptionAlgorithm(key, rand):
     a_string = str(key) + str(rand)
     hashed = hashlib.sha256(a_string.encode('utf-8')).hexdigest()
     return hashed
 
+
 def rand_num():
     nums = secrets.token_hex(16)
     return nums
 
+
 def getID(data):
-    id = data[data.find('(')+1:data.find(')')]
+    id = data[data.find('(') + 1:data.find(')')]
     return id
 
+
 def findK(ID):
-    f1 = open("listofsubscribers.txt","r")
+    f1 = open("listofsubscribers.txt", "r")
     clients = f1.readlines()
     found = 0
     for clientInfo in clients:
@@ -31,11 +36,12 @@ def findK(ID):
             found = 1
             key = clientInfo
             key = clientInfo[11:-1]
-            return int(key,16)
+            return int(key, 16)
         found = 0
     f1.close()
     if found == 0:
         print("Could not find Key associated to client!!")
+
 
 def challenge(rand, clientAddr, clientID):
     global UDPsocket
@@ -55,33 +61,39 @@ def challenge(rand, clientAddr, clientID):
     else:
         UDPsocket.sendto(bytes("Err:UnverifiedUser", 'utf-8'), clientAddr)
 
+
 def auth_success(rand_cookie, portnumber, clientAddr):
     UDPsocket.sendto(bytes(f"AUTH_SUCCESS({rand_cookie},{TCP_PORT})", "utf-8"), clientAddr)
+
 
 def auth_fail(clientAddr):
     UDPsocket.sendto(bytes(f"AUTH_FAIL", "utf-8"), clientAddr)
 
+
 def connected():
     pass
+
 
 def chat_started():
     pass
 
+
 def unavailable():
     pass
+
 
 def end_notif():
     pass
 
+
 # Function to parse client messages based on message sent by a certain client.
 def parse(MESSAGE, clientAddr):
-
     if MESSAGE[0:5] == "HELLO":
         rand = challenge(rand_num(), clientAddr, MESSAGE[6:-1])
         response, clientAddr = UDPsocket.recvfrom(1024)  # buffer size is 1024 bytes
-        if str(response[0:8],'utf-8') == "RESPONSE":
-            ID = str(response[9:19],'utf-8')
-            Res = str(response[20:-1],'utf-8')
+        if str(response[0:8], 'utf-8') == "RESPONSE":
+            ID = str(response[9:19], 'utf-8')
+            Res = str(response[20:-1], 'utf-8')
             XRES = encryptionAlgorithm(findK(ID), rand)
             if Res == XRES:
                 auth_success(rand_num(), TCP_PORT, clientAddr)
@@ -107,20 +119,29 @@ def parse(MESSAGE, clientAddr):
 
     if MESSAGE[0:4] == "CHAT":
         print(MESSAGE)
+        # ex: write_log(session_id, clients, data)
         print("chat_history.write_log()")
 
     if MESSAGE[0:11] == "HISTORY_REQ":
-        print(MESSAGE)
-        chat_history.read_log("abcd", "efgh")
+        # print(MESSAGE)
+
+        client_b = MESSAGE[12:22]
+        log = chat_history.read_log(['current_client', client_b])
+        if len(log) > 0:
+            # forward log to the requesting client
+            print("push chat history on to client")
+        else:
+            print("no history found")
+
 
 def main():
     global UDPsocket
     print("[STARTING] server is starting...")
-    UDPsocket.bind((HOST_IP, UDP_PORT)) # UDP socket bound
+    UDPsocket.bind((HOST_IP, UDP_PORT))  # UDP socket bound
     print(f"[STARTING] server is running on {HOST_IP}:{UDP_PORT}")
 
     while True:
-        message, addr = UDPsocket.recvfrom(1024) # buffer size is 1024 bytes
+        message, addr = UDPsocket.recvfrom(1024)  # buffer size is 1024 bytes
         print("SERVER-received message: %s" % message)
         parse(str(message, 'utf-8'), addr)
         #
@@ -143,6 +164,7 @@ def main():
         # clients= [client_A_ID, client_B_ID]
         # #res = chat_started(clients, payload)
         # #print(res)
+
 
 main()
 

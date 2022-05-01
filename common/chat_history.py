@@ -19,15 +19,15 @@ def file_name(clients):
     files = [x.name for x in txt_files if x.is_file()]
 
     # build the filename and validate the existence against the 'files' list.
-    f_name = f"{clients[0]}{clients[1]}.txt" if f"{clients[0]}{clients[1]}.txt" in files \
-        else f"{clients[1]}{clients[0]}.txt" if f"{clients[1]}{clients[0]}.txt" in files \
+    f_name = f"{clients[0]}_{clients[1]}.txt" if f"{clients[0]}_{clients[1]}.txt" in files \
+        else f"{clients[1]}_{clients[0]}.txt" if f"{clients[1]}_{clients[0]}.txt" in files \
         else f"no_file"
     if f_name == 'no_file':
-        f_name = f"{clients[0]}{clients[1]}.txt"
+        f_name = f"{clients[0]}_{clients[1]}.txt"
         f1 = open(f"{p}/{f_name}", "w+")
 
         # build payload
-        payload = f"Session ID\tclient\t\tData\n"
+        payload = ""
 
         # write payload
         f1.write(payload)
@@ -47,7 +47,7 @@ def write_log(session_id, clients, data):
 
     # build payload
     # payload = f"{curr_time} {session_id} {client_a} {client_b}:\n {data}\n"
-    payload = f"{session_id}\t\t{clients[1]}\t{data}\n"
+    payload = f"{session_id}\tfrom: {clients[1]}\t\t{data}\n"
 
     # write payload
     f1.write(payload)
@@ -61,15 +61,14 @@ def write_log(session_id, clients, data):
 
 # read file to end user
 def read_log(clients):
+    print("chat-history ", clients)
     f = file_name(clients)
+    print(f"{p}/{f}")
 
     f1 = open(f"{p}/{f}", "r")
 
     log = f1.readlines()
 
-    for line in log:
-        print(line)
-
     f1.close()
 
-    return f'read from {f1.name}'
+    return log

@@ -10,11 +10,15 @@ SERVER_IP = "127.0.0.1"
 PORT = 8008
 ID = ""
 K = ""
+hist_log = ""
+temp_client = ""
+
 
 def encryptionAlgorithm(key, rand):
     a_string = str(K) + str(rand)
     hashed = hashlib.sha256(a_string.encode('utf-8')).hexdigest()
     return hashed
+
 
 # Function to assign each client an ID which is not part of usedClientIDs (currently active clients)
 def AssignIDandKey():
@@ -42,9 +46,11 @@ def AssignIDandKey():
         print("Could not assign ID, too many users! Please try again later. No free lunch in Life :)\n")
         return "InvalidUser"  # can still type ID is just set to invalid user
 
+
 # Function to print server timeout response in case server takes too long to responnd
 def timeout():
     print("Server did not respond, timed out... Try re-logging again.")
+
 
 # Function to Authorize client on typing "log on"
 def authorize():
@@ -63,7 +69,7 @@ def authorize():
     challenge_timeout.cancel()
 
     # Checking for CHALLENGE success
-    if str(challenge,'utf-8') != "Err:UnverifiedUser":
+    if str(challenge, 'utf-8') != "Err:UnverifiedUser":
         print("Authenticating User...")
         challenge = str(challenge[10:-1], 'utf-8')
         sock.sendto(bytes(f"RESPONSE({ID},{encryptionAlgorithm(K, challenge)})", 'utf-8'), (SERVER_IP, PORT))
@@ -81,17 +87,38 @@ def authorize():
         print(f"{challenge}: Try re-logging again.")
 
 
+def history_resp(client_b):
+    try:
+        global temp_client
+        global hist_log
+        if len(hist_log) > 0 and temp_client == client_b:
+            print(hist_log[-1])
+            hist_log.pop(-1)
+        #     will need to clear hist_log somewhere if new messages are saved in log
+        else:
+            # fetch history response through TCP
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
+            sock.sendto(bytes(f"HISTORY_REQ({client_b})", 'utf-8'), (SERVER_IP, PORT))
+            hist_log = sock.recvfrom(1024)
+    except IndexError:
+        print('No history available')
+
 
 # Function to parse each message input by the client to do respective functions
 def parse(input):
     # Match case to non-character sensitive message
     if input == "log on":
-            print("\nPlease wait while we are trying to establish a connection to the chat server...")
-            authorize()
+        print("\nPlease wait while we are trying to establish a connection to the chat server...")
+        authorize()
 
     if input == "log off":
-            print("Thank you for participating in our chat bot!")
-            exit(0)
+        print("Thank you for participating in our chat bot!")
+        exit(0)
+
+    if input[:7] == "history":
+        client_b = input[8:].replace(" ", "")
+        history_resp(client_b)
+
     return input
 
 
@@ -113,7 +140,6 @@ def main():
 
 
 main()
-
 
 """
 --Client A Initiates Chat Session to B--
