@@ -1,10 +1,9 @@
 import socket
 import time
 from threading import Timer
-import string
-import random
-import os
-import hashlib
+import logging
+
+from common import algorithms
 
 SERVER_IP = "127.0.0.1"
 PORT = 8008
@@ -12,13 +11,6 @@ ID = ""
 K = ""
 hist_log = ""
 temp_client = ""
-
-
-def encryptionAlgorithm(key, rand):
-    a_string = str(K) + str(rand)
-    hashed = hashlib.sha256(a_string.encode('utf-8')).hexdigest()
-    return hashed
-
 
 # Function to assign each client an ID which is not part of usedClientIDs (currently active clients)
 def AssignIDandKey():
@@ -46,46 +38,39 @@ def AssignIDandKey():
         print("Could not assign ID, too many users! Please try again later. No free lunch in Life :)\n")
         return "InvalidUser"  # can still type ID is just set to invalid user
 
-
-# Function to print server timeout response in case server takes too long to responnd
-def timeout():
-    print("Server did not respond, timed out... Try re-logging again.")
-
-
 # Function to Authorize client on typing "log on"
-def authorize():
-    challenge_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
-    response_timeout = Timer(4, timeout)  # Call function timeout() in 60 seconds, 4 seconds for testing
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
-    AUTH_SUCCESS = 1
-    AUTH_FAIL = 0
+def authorize(sock):
     # Sending HELLO(Client-ID) to server
     print("Connection established! Attempting Handshake...")
     sock.sendto(bytes(f"HELLO({ID})", 'utf-8'), (SERVER_IP, PORT))
+    logging.info("Sending HELLO(%s) to server", ID)
 
     # Waiting for CHALLENGE(rand) from server
-    challenge_timeout.start()
     challenge, addr = sock.recvfrom(1024)
-    challenge_timeout.cancel()
+    logging.info("Received %s from server", challenge)
 
     # Checking for CHALLENGE success
-    if str(challenge, 'utf-8') != "Err:UnverifiedUser":
+    if str(challenge,'utf-8') != "Err:UnverifiedUser":
         print("Authenticating User...")
         challenge = str(challenge[10:-1], 'utf-8')
-        sock.sendto(bytes(f"RESPONSE({ID},{encryptionAlgorithm(K, challenge)})", 'utf-8'), (SERVER_IP, PORT))
+        sock.sendto(bytes(f"RESPONSE({ID},{algorithms.encryptionAlgorithm(K, challenge)})", 'utf-8'), (SERVER_IP, PORT))
 
         # Waiting for AUTHENTICATION from server
-        response_timeout.start()
         response, addr = sock.recvfrom(1024)
-        response_timeout.cancel()
         if str(response[0:12], 'utf-8') == "AUTH_SUCCESS":
             print("Successfully Authenticated!")
+            response = response.split(',')
+            rand_cookie = response[1][13:]
+            TCP_PORT = response[2][:-1]
+            print(rand_cookie, TCP_PORT)
             print("Welcome to the Chat Server.\n")
         elif str(response[0:9], 'utf-8') == "AUTH_FAIL":
             print("User could not be Authenticated... Please try again with valid credentials")
     else:
         print(f"{challenge}: Try re-logging again.")
 
+def chat_request(Client_ID_X):
+    pass
 
 def history_resp(client_b):
     try:
@@ -105,15 +90,20 @@ def history_resp(client_b):
 
 
 # Function to parse each message input by the client to do respective functions
-def parse(input):
+def parse(input, sock):
     # Match case to non-character sensitive message
     if input == "log on":
-        print("\nPlease wait while we are trying to establish a connection to the chat server...")
-        authorize()
+            print("\nPlease wait while we are trying to establish a connection to the chat server...")
+            authorize(sock)
 
     if input == "log off":
-        print("Thank you for participating in our chat bot!")
-        exit(0)
+            print("Thank you for participating in our chat bot!")
+            exit(0)
+
+    if "Chat Client-ID-" in input:
+        print(f"\nRequesting chat session with ", input[5:16])
+        chat_request(input[5:16])
+
 
     if input[:7] == "history":
         client_b = input[8:].replace(" ", "")
@@ -126,13 +116,15 @@ def main():
     global ID
     global K
     ID, K = AssignIDandKey()
+    logging.getLogger().setLevel(logging.DEBUG)
 
     # Opening a Socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Connection to the Internet
 
     # Loop to parse through each message from the client
     while True:
-        parse(input(f"{ID} > ").lower())
+        parse(input(f"{ID} > ").lower(), sock)
+
         # sock.sendto(MESSAGE, (SERVER_IP, PORT))
         # REPLY = sock.recvfrom(1024)
         # print("MESSAGE : %s\n" % str(MESSAGE, 'utf-8'))

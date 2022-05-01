@@ -1,50 +1,16 @@
 import socket
-import random
 import secrets
-from common import chat_history
-import hashlib
+import threading
+import logging
+import chat_history
+
+from common import algorithms
 
 HOST_IP = "127.0.0.1"
 UDP_PORT = 8008
 TCP_PORT = 4761
 
-UDPsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Welcoming socket for UDP
-
-
-def encryptionAlgorithm(key, rand):
-    a_string = str(key) + str(rand)
-    hashed = hashlib.sha256(a_string.encode('utf-8')).hexdigest()
-    return hashed
-
-
-def rand_num():
-    nums = secrets.token_hex(16)
-    return nums
-
-
-def getID(data):
-    id = data[data.find('(') + 1:data.find(')')]
-    return id
-
-
-def findK(ID):
-    f1 = open("listofsubscribers.txt", "r")
-    clients = f1.readlines()
-    found = 0
-    for clientInfo in clients:
-        if ID in clientInfo:
-            found = 1
-            key = clientInfo
-            key = clientInfo[11:-1]
-            return int(key, 16)
-        found = 0
-    f1.close()
-    if found == 0:
-        print("Could not find Key associated to client!!")
-
-
-def challenge(rand, clientAddr, clientID):
-    global UDPsocket
+def send_challenge(rand, clientAddr, clientID, sock):
     # Verify on listofsubs
     f1 = open("listofsubscribers.txt", "r")
     clients = f1.readlines()
@@ -56,141 +22,193 @@ def challenge(rand, clientAddr, clientID):
         verified = 0
 
     if verified == 1:
-        UDPsocket.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), clientAddr)
-        return rand
+        sock.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), clientAddr)
+        logging.info('Sending challenge to client %s ', clientAddr)
     else:
-        UDPsocket.sendto(bytes("Err:UnverifiedUser", 'utf-8'), clientAddr)
+        sock.sendto(bytes("Err:UnverifiedUser", 'utf-8'), clientAddr)
+        logging.info('Client %s could not be verified', clientAddr)
 
+def send_auth_success(rand_cookie, sock, client_address):
+    sock.sendto(bytes(f"AUTH_SUCCESS({rand_cookie},{TCP_PORT})", "utf-8"), client_address)
 
-def auth_success(rand_cookie, portnumber, clientAddr):
-    UDPsocket.sendto(bytes(f"AUTH_SUCCESS({rand_cookie},{TCP_PORT})", "utf-8"), clientAddr)
+def send_auth_fail(sock, client_address):
+    sock.sendto(bytes(f"AUTH_FAIL", "utf-8"), client_address)
 
+def send_connected(sock):
+    sock.sendto(bytes("CONNECTED TO SERVER", "utf-8"))
 
-def auth_fail(clientAddr):
-    UDPsocket.sendto(bytes(f"AUTH_FAIL", "utf-8"), clientAddr)
-
-
-def connected():
+def send_chat_started():
     pass
 
-
-def chat_started():
+def send_unavailable():
     pass
 
-
-def unavailable():
+def send_end_notif():
     pass
 
+class Client:
+    def __init__(self, client_address):
+        self.client_address = None
+        self.client_id = None
+        self.XRES = None
+        self.stage = 0
 
-def end_notif():
-    pass
+    # Getters
+    def get_client_address(self):
+        return self.client_address
+
+    def get_client_id(self):
+        return self.client_id
+
+    def get_XRES(self):
+        return self.XRES
+
+    # Setters
+    def set_client_id(self, client_id):
+        self.client_id = client_id
+
+    def set_XRES(self, XRES):
+        self.XRES = XRES
 
 
-# Function to parse client messages based on message sent by a certain client.
-def parse(MESSAGE, clientAddr):
-    if MESSAGE[0:5] == "HELLO":
-        rand = challenge(rand_num(), clientAddr, MESSAGE[6:-1])
-        response, clientAddr = UDPsocket.recvfrom(1024)  # buffer size is 1024 bytes
-        if str(response[0:8], 'utf-8') == "RESPONSE":
-            ID = str(response[9:19], 'utf-8')
-            Res = str(response[20:-1], 'utf-8')
-            XRES = encryptionAlgorithm(findK(ID), rand)
-            if Res == XRES:
-                auth_success(rand_num(), TCP_PORT, clientAddr)
+class UDPServer:
+    def __init__(self):
+        logging.info("Initializing UDP Broker")
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Welcoming socket for UDP
+        self.sock.bind((HOST_IP, UDP_PORT))
+        self.clients_list = []
+
+        while True:
+            self.wait_for_client()
+
+    # Wait for a new client to connect
+    def wait_for_client(self):
+        try:
+            # Receive data from client
+            data, client_address = self.sock.recvfrom(1024)
+            logging.info('Received data from client %s: %s', client_address, data)
+
+            # Add client to list of clients
+            if self.clients_list == []:
+                self.clients_list.append(Client(client_address))
             else:
-                auth_fail(clientAddr)
+                for any_client in self.clients_list:
+                    if any_client.client_address != client_address:
+                        self.clients_list.append(Client(client_address))
 
-    if MESSAGE[0:7] == "CONNECT":
-        print(MESSAGE)
-        connected()
+            logging.info(self.clients_list)
 
-    # S:Think if to include Client A connected messaged should be parsed through this or not
-    if MESSAGE[0:12] == "CHAT_REQUEST":
-        if client_available:
-            print(MESSAGE)
-            chat_started()
-        elif not client_available:
-            print(MESSAGE)
-            unavailable()
+            # Handle client request
+            process_response = threading.Thread(target=self.handle_client(data, client_address))
+            process_response.start()
 
-    if MESSAGE[0:11] == "END_REQUEST":
-        print(MESSAGE)
-        end_notif()
+        except OSError:
+            print("OSError in UDP Server")
 
-    if MESSAGE[0:4] == "CHAT":
-        print(MESSAGE)
-        # ex: write_log(session_id, clients, data)
-        print("chat_history.write_log()")
+    def handle_client(self, data, client_address):
+        # resolve_msg = threading.Thread(target=parse(data, client_address))
+        # resolve_msg.start()
+        data = str(data, 'utf-8')
+        if data[0:5] == "HELLO":
+            rand = algorithms.rand_num()
+            send_challenge(rand, client_address, data[6:-1], self.sock)
+            XRES = algorithms.encryptionAlgorithm(data[6:-1], rand)
+            for specific_client in self.clients_list:
+                if specific_client.get_client_address() == client_address:
+                    specific_client.set_XRES(XRES)
+                    logging.info(XRES)
+                    print(specific_client.XRES)
+        if data[0:8] == "RESPONSE":
 
-    if MESSAGE[0:11] == "HISTORY_REQ":
-        # print(MESSAGE)
+            ID = data[9:19]
+            Res = data[20:-1]
+            rand = 0
+            XRES = 0
+            for id, current_client in enumerate(self.clients_list):
+                if client_address == current_client:
+                    rand = self.clients_list[id][3]
+                else:
+                    rand = 0
+            if rand != 0:
+                XRES = algorithms.encryptionAlgorithm(algorithms.findK(ID), rand)
+            else:
+                print("Error:Random number was not found!")
+            # Checking to see if client was authenticated or not
+            if Res == XRES:
+                rand_cookie = algorithms.rand_num()
+                send_auth_success(rand_cookie, self.sock, client_address)
+                rand_cookie()
+            else:
+                send_auth_fail(self.sock, client_address)
+        #CONNECT(rand_cookie) received
+        if data[0:9] == "CONNECTED":
+            send_connected(self.sock)
+        #CHAT_RESQUESTED(Client_ID-?)
+        if data[0:15] == "CHAT_REQUESTED":
+            #get client-id
+            data[16:]
+            #check if client-id is online
+            #if connected CHAT_STARTED(session-ID, CLient-id)
+            #else UNREACHABLE(client-id)
+            pass
 
-        client_b = MESSAGE[12:22]
-        log = chat_history.read_log(['current_client', client_b])
-        if len(log) > 0:
-            # forward log to the requesting client
-            print("push chat history on to client")
-        else:
-            print("no history found")
+
+
+
+class TCPServer:
+    def __init__(self):
+        logging.info("Initializing TCP Broker")
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Welcoming socket for TCP
+        self.sock.bind((HOST_IP, TCP_PORT))
+        self.sock.listen()
+        self.clients_list = []
+
+        while True:
+            data, client_address = self.sock.accept()
+            process_response = threading.Thread(target=self.handle_client(data, client_address))
+            process_response.start()
+
+    def handle_client(self, data, client_address):
+        if data[0:7] == "CONNECT":
+            print(data)
+            send_connected()
+
+        # S:Think if to include Client A connected messaged should be parsed through this or not
+        if data[0:12] == "CHAT_REQUEST":
+            # if client_available:
+            #     print(MESSAGE)
+            send_chat_started()
+            # elif not client_available:
+            #     print(MESSAGE)
+            #     unavailable()
+
+        if data[0:11] == "END_REQUEST":
+            # print(MESSAGE)
+            send_end_notif()
+
+        if data[0:4] == "CHAT":
+            # print(MESSAGE)
+            # ex: write_log(session_id, clients, data)
+            print("chat_history.write_log()")
+
+        if data[0:11] == "HISTORY_REQ":
+            # print(MESSAGE)
+            client_b = data[12:22]
+            log = chat_history.read_log(['current_client', client_b])
+            if len(log) > 0:
+                # forward log to the requesting client
+                print("push chat history on to client")
+            else:
+                print("no history found")
 
 
 def main():
-    global UDPsocket
-    print("[STARTING] server is starting...")
-    UDPsocket.bind((HOST_IP, UDP_PORT))  # UDP socket bound
-    print(f"[STARTING] server is running on {HOST_IP}:{UDP_PORT}")
 
-    while True:
-        message, addr = UDPsocket.recvfrom(1024)  # buffer size is 1024 bytes
-        print("SERVER-received message: %s" % message)
-        parse(str(message, 'utf-8'), addr)
-        #
-        # # update client_B_ID--------------------------------
-        # client_B_ID = 'client789'
-        # print("client-A-ID is: ", client_A_ID)
-        # print("client-B-ID is: ", client_B_ID)
-        #
-        # #  sliced message to separate payload
-        # payload = str(data[9:], 'utf-8')
-        # print("payload is: ", payload)
-        # if payload[:7].lower().strip() == 'history':
-        #     print(payload[7:].lower().strip())
-        #     chat_history.read_log(client_A_ID, payload[7:].lower().strip())
-        #
-        # #  sliced message to separate payload
-        # if payload[:6].lower() == 'log on':
-        #     print("initiate log on")
-        #     connect("CONNECTED")
-        # clients= [client_A_ID, client_B_ID]
-        # #res = chat_started(clients, payload)
-        # #print(res)
+    logging.getLogger().setLevel(logging.DEBUG)
+    UDPHandler = threading.Thread(target=UDPServer)
+    TCPHandler = threading.Thread(target=TCPServer)
 
+    UDPHandler.start()
+    TCPHandler.start()
 
 main()
-
-# 1. Check if client is on list of subscribers
-# 2. Retrieve the client’s secret key and send a CHALLENGE (rand) message to the client, using UDP
-# 3. Wait for RESPONSE from client.
-# 4.1 If authentication is not successful, the server sends an AUTH_FAIL message to the client.
-# 4.2 Else generate an encryption key CK-A, then sends an AUTH_SUCCESS(rand_cookie, port_number) message to the client. The message is encrypted by CK-A.
-# From this point on, all data exchanged between client A and the server is encrypted using CK-A.
-# 5. Wait for TCP connection request from client.
-# From this point on, until the TCP connection is closed, all data (signaling messages and chat) is exchanged over the TCP connection.
-# 6. The server sends CONNECTED to the client. The client is connected.
-# 7. If client types “Log off” or when the activity timer expires, the TCP connection is closed.
-
-# Client A Initiates Chat Session to B
-# This scenario will go through the following steps.
-# Client A must have already gone through the connection phase and be connected to the server.
-#     End user types “Chat Client-ID-B” (client A sends a CHAT_REQUEST (Client-ID-B)).
-#         - If the server determines client-B is connected and not already engaged in another chat session
-#             1. The server sends CHAT_STARTED(session-ID, Client-ID-B) to client A
-#             2. The server sends CHAT_STARTED(session-ID, Client-ID-A) to client B
-#             3. Client A and Client B are now engaged in a chat session and can send chat messages with each other, through the server.
-#             4. The clients display “Chat started” to the end user at A and B.
-#         - If client B is not available, the server sends UNREACHABLE (Client-ID-B) to client A.
-#
-# Client A or B chooses to end chat session.
-#     End user types “End Chat”, (Client sends END_REQUEST (session-ID) to the server).
-#         1. The server sends an END_NOTIF(session-ID) to the other client.
-#         2. The Clients display “Chat ended” to their respective end users.
