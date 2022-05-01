@@ -8,8 +8,6 @@ from common import algorithms
 
 SERVER_IP = "127.0.0.1"
 PORT = 8008
-SOCK = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
 
 # Function to assign each client an ID which is not part of usedClientIDs (currently active clients)
 def AssignIDandKey():
@@ -94,41 +92,41 @@ class Client:
         self.rand = None
         self.Res = None
         self.protocol = "UDP"
+        self.sock =  socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.recv_buffer = ""
 
         # Start actively listening for messages
-        constantly_receive_messages = threading.Thread(target=self.Receiver(self))
+        constantly_receive_messages = threading.Thread(target=self.Receiver())
         constantly_receive_messages.start()
 
-        while self.protocol == "UDP":
-            client_input = input(f"{ID} > ")
-            process_input = threading.Thread(target=self.Parser(client_input))
-            process_input.start()
-        SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
         while True:
             client_input = input(f"{ID} > ")
             process_input = threading.Thread(target=self.Parser(client_input))
             process_input.start()
+            # Output buffered messages after receiving client input
 
-    def Receiver(self):
-        global SOCK
-        while self.protocol == "UDP":
-            process_response = threading.Thread(target=self.Processor(SOCK))
-            process_response.start()
-        SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        while True:
-            process_response = threading.Thread(target=self.Processor(SOCK))
-            process_response.start()
-
+    # Parses Client Input
     def Parser(self, client_input):
-        while True:
-            process_input = threading.Thread(target=self.Processor(client_input))
-            process_input.start()
+        pass
 
-    def Processor(self, SOCK):
+    # Driver function for receiving UDP/TCP Protocol messages
+    def Receiver(self):
+        while self.protocol == "UDP":
+            data, server_address = self.sock.recvfrom(1024)
+            process_response = threading.Thread(target=self.Processor(data))
+            process_response.start()
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind((SERVER_IP, PORT))
+        self.sock.listen()
         while True:
-            process_input = threading.Thread(target=self.Processor(client_input))
-            process_input.start()
+            data, server_address = self.sock.accept()
+            process_response = threading.Thread(target=self.Processor(data))
+            process_response.start()
+
+    # Processes UDP/TCP Protocol messages
+    # Changes protocol / Terminates Client
+    def Processor(self, data):
+        pass
 
 def main():
 
