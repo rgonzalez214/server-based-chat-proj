@@ -1,187 +1,230 @@
 import socket
-import random
-import secrets
+import threading
+import logging
+import time
+from _thread import start_new_thread
+
+from cryptography.fernet import Fernet
+from encodings.base64_codec import base64_encode
+
+from common import algorithms
 import chat_history
+
+
 HOST_IP = "127.0.0.1"
 UDP_PORT = 8008
 TCP_PORT = 4761
 
-UDPsocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Welcoming socket for UDP
+def send_challenge(sock, currentClient, rand):
+    sock.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), currentClient.client_address)
 
-def encryptionAlgorithm(key, rand):
-    k = key
-    m = int(rand,16)
-    kb = bin(k)[6:]
-    mb = bin(m)[4:]
-    kbl = kb[0:64]
-    kbr = kb[64:]
-    mbl = mb[0:64]
-    mbr = mb[64:]
-    a1 = int(kbl, 2)^int(mbr, 2)
-    a2 = int(kbr, 2)^int(mbl, 2)
-    a3 = a1^a2
-    a4 = bin(a3)[2:].zfill(64)
-    a5 = a4[0:32]
-    a6 = a4[32:]
-    a7 = int(a5, 2)
-    int(a6, 2)
-    return bin(a7)[2:].zfill(len(a5))
+def send_auth_success(sock, currentClient, fernet):
+    sock.sendto(fernet.encrypt(bytes(f"AUTH_SUCCESS({currentClient.rand},{TCP_PORT})", "utf-8")), currentClient.client_address)
 
-def rand_num():
-    nums = secrets.token_hex(16)
-    return nums
+def send_auth_fail(sock, currentClient):
+    logging.info('Sending AUTH_FAIL to client %s ', currentClient.client_address)
+    sock.sendto(bytes(f"AUTH_FAIL", "utf-8"), currentClient.client_address)
 
-def getID(data):
-    id = data[data.find('(')+1:data.find(')')]
-    return id
+def send_connected(currentClient, fernet):
+    currentClient.client_connection.send(fernet.encrypt(bytes("CONNECTED", "utf-8")))
 
-def findK(ID):
-    f1 = open("listofsubscribers.txt","r")
-    clients = f1.readlines()
-    found = 0
-    for clientInfo in clients:
-        if ID in clientInfo:
-            found = 1
-            key = clientInfo
-            key = clientInfo[11:-1]
-            return int(key,16)
-        found = 0
-    f1.close()
-    if found == 0:
-        print("Could not find Key associated to client!!")
+def send_chat_started(sessionID, currentClient, requestedClient):
+    fernet = Fernet(currentClient.ciphering_key)
+    currentClient.client_connection.send(fernet.encrypt(bytes(f"CHAT_STARTED({sessionID},{requestedClient.client_id})", "utf-8")))
 
-def challenge(rand, clientAddr, clientID):
-    global UDPsocket
-    # Verify on listofsubs
-    f1 = open("listofsubscribers.txt", "r")
-    clients = f1.readlines()
-    verified = 0
-    for client in clients:
-        if clientID == client[0:10]:
-            verified = 1
-            break
-        verified = 0
+def send_unreachable(currentClient, requestedClient):
+    fernet = Fernet(currentClient.ciphering_key)
+    currentClient.client_connection.send(fernet.encrypt(bytes(f"UNREACHABLE({requestedClient.client_id})", "utf-8")))
 
-    if verified == 1:
-        UDPsocket.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), clientAddr)
-        return rand
-    else:
-        UDPsocket.sendto(bytes("Err:UnverifiedUser", 'utf-8'), clientAddr)
+def send_endnotif(requestedClient):
+    fernet = Fernet(requestedClient.ciphering_key)
+    requestedClient.client_connection.send(fernet.encrypt(bytes(f"END_NOTIF({requestedClient.sessionID})", "utf-8")))
 
-def auth_success(rand_cookie, portnumber, clientAddr):
-    UDPsocket.sendto(bytes(f"AUTH_SUCCESS({rand_cookie},{TCP_PORT})", "utf-8"), clientAddr)
+def send_chat(currentClient, requestedClient, message):
+    fernet = Fernet(requestedClient.ciphering_key)
+    requestedClient.client_connection.send(fernet.encrypt(bytes(f"CHAT({currentClient.sessionID},{message})", "utf-8")))
 
-def auth_fail(clientAddr):
-    UDPsocket.sendto(bytes(f"AUTH_FAIL", "utf-8"), clientAddr)
-
-def connected():
+def send_history_resp(currentClient, requestedClient, message):
     pass
 
-def chat_started():
-    pass
+transitioning_client = None
 
-def unavailable():
-    pass
+class Client:
+    def __init__(self, client_address):
+        self.sock = None
+        self.client_address = client_address
+        self.client_connection = None
+        self.authenticated = False
+        self.client_id = None
+        self.secret_key = None
+        self.ciphering_key = None
+        self.rand = None
+        self.XRES = None
+        self.sessionID = None
 
-def end_notif():
-    pass
+class UDPServer:
+    def __init__(self):
+        logging.info("Initializing UDP Broker")
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Welcoming socket for UDP
+        self.sock.bind((HOST_IP, UDP_PORT))
+        self.clients_list = []
+        while True:
+            self.wait_for_client()
 
-# Function to parse client messages based on message sent by a certain client.
-def parse(MESSAGE, clientAddr):
+    # Wait for a new client to connect
+    def wait_for_client(self):
+        try:
+            # Receive data from client
+            data, client_address = self.sock.recvfrom(1024)
+            newClient = Client(client_address)
 
-    if MESSAGE[0:5] == "HELLO":
-        rand = challenge(rand_num(), clientAddr, MESSAGE[6:-1])
-        response, clientAddr = UDPsocket.recvfrom(1024)  # buffer size is 1024 bytes
-        if str(response[0:8],'utf-8') == "RESPONSE":
-            ID = str(response[9:19],'utf-8')
-            Res = str(response[20:-1],'utf-8')
-            XRES = encryptionAlgorithm(findK(ID), rand)
-            if Res == XRES:
-                auth_success(rand_num(), TCP_PORT, clientAddr)
+            # Add client to list of clients
+            if self.clients_list == []:
+                self.clients_list.append(newClient)
             else:
-                auth_fail(clientAddr)
+                # Checking to see if the client exists on the current list of clients or not
+                client_exists = False
+                for i, each_client in enumerate(self.clients_list):
+                    if newClient.client_address == each_client.client_address:
+                        newClient = self.clients_list[i]
+                        client_exists = True
+                        break
 
-    if MESSAGE[0:7] == "CONNECT":
-        print(MESSAGE)
-        connected()
+                if not client_exists:
+                    self.clients_list.append(newClient)
 
-    # S:Think if to include Client A connected messaged should be parsed through this or not
-    if MESSAGE[0:12] == "CHAT_REQUEST":
-        if client_available:
-            print(MESSAGE)
-            chat_started()
-        elif not client_available:
-            print(MESSAGE)
-            unavailable()
+            process_response = threading.Thread(target=self.handle_client(data, newClient))
+            process_response.start()
 
-    if MESSAGE[0:11] == "END_REQUEST":
-        print(MESSAGE)
-        end_notif()
+        except OSError:
+            print("OSError in UDP Server")
 
-    if MESSAGE[0:4] == "CHAT":
-        print(MESSAGE)
-        print("chat_history.write_log()")
+    def handle_client(self, data, current_client):
+        data = str(data, 'utf-8')
+        # HELLO(Client-ID) Received
+        if data[0:5] == "HELLO":
+            current_client.client_id = data[6:-1]
+            # Verify if the client is on the list of Subscribers
+            if algorithms.verify(current_client.client_id):
+                # Find Client Secret Key
+                current_client.secret_key = algorithms.findSecretKey(current_client.client_id)
+                if current_client.secret_key == -1:
+                    logging.info(f"{current_client.client_id}: Could not find client Secret Key!")
+                else:
+                    # Client verified and secret key obtained
+                    # Generate a random number, generate XRES and send client the CHALLENGE
+                    current_client.rand = algorithms.rand_num()
+                    current_client.XRES = algorithms.a3(current_client.rand, current_client.secret_key)
+                    send_challenge(self.sock, current_client, current_client.rand)
+            else:
+                logging.info(f"{current_client.client_id}: Could not verify client!")
 
-    if MESSAGE[0:11] == "HISTORY_REQ":
-        print(MESSAGE)
-        chat_history.read_log("abcd", "efgh")
+        # RESPONSE(Res) received
+        if data[0:8] == "RESPONSE":
+            data = data.split(",")
+            if current_client.client_id != data[0][9:] or current_client.XRES != data[1][:-1]:
+                send_auth_fail(self.sock, current_client)
+            else:
+                current_client.ciphering_key, size = base64_encode(bytes(algorithms.a8(current_client.rand, current_client.secret_key), 'utf-8'))
+                fernet = Fernet(current_client.ciphering_key)
+                send_auth_success(self.sock, current_client, fernet)
+                global transitioning_client
+                while transitioning_client != None:
+                    time.sleep(1)
+                transitioning_client = current_client
+
+class TCPServer:
+    def __init__(self):
+        logging.info("Initializing TCP Broker")
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Welcoming socket for TCP
+        self.sock.bind((HOST_IP, TCP_PORT))
+        self.sock.listen()
+        self.clients_list = []
+
+        while True:
+            global transitioning_client
+            while transitioning_client == None:
+                time.sleep(1)
+
+            current_client = transitioning_client
+            connection, client_address = self.sock.accept()
+            current_client.client_connection = connection
+            current_client.client_address = client_address
+
+            # Add client to list of clients
+            self.clients_list.append(current_client)
+            transitioning_client = None
+            start_new_thread(self.handle_client, (current_client, ))
+
+    def handle_client(self, current_client):
+        while True:
+            data = current_client.client_connection.recv(1024)
+            # logging.info(f"Received on TCP: {data}")
+            fernet = Fernet(current_client.ciphering_key)
+            data = str(fernet.decrypt(data), 'utf-8')
+            # logging.info(f"Received on TCP: {data}")
+            if data[0:7] == "CONNECT":
+                if current_client.rand == data[8:-1]:
+                    send_connected(current_client, fernet)
+                else:
+                    logging.info('Client %s cannot be connected. Rand_Cookie invalid!', current_client.client_address)
+
+            # S:Think if to include Client A connected messaged should be parsed through this or not
+            if data[0:12] == "CHAT_REQUEST":
+                client_id = data[13:-1]
+                client_a = current_client
+                client_b = None
+                for requested_client in self.clients_list:
+                    if client_id == requested_client.client_id:
+                        client_b = requested_client
+                        break
+                if client_b != None and client_b.sessionID == None:
+                    sessionID = algorithms.create_sessionID()
+                    client_a.sessionID = sessionID
+                    client_b.sessionID = sessionID
+                    send_chat_started(sessionID, client_a, client_b)
+                    send_chat_started(sessionID, client_b, client_a)
+                else:
+                    send_unreachable(client_a, client_b)
+
+            elif data[0:4] == "CHAT":
+                data = data.split(",")
+                sessionID = data[0][5:]
+                message = data[1][:-1]
+                client_a = current_client
+                client_b = None
+                for requested_client in self.clients_list:
+                    if client_a.client_id != requested_client.client_id:
+                        client_b = requested_client
+                        break
+                if client_b != None:
+                    send_chat(client_a, client_b, message)
+                    # History needs to happen Here
+                    print("chat_history.write_log()")
+
+            if data[0:11] == "END_REQUEST":
+                sessionID = data[12:-1]
+                client_a = current_client
+                client_b = None
+                for requested_client in self.clients_list:
+                    if client_a.client_id != requested_client.client_id and sessionID == requested_client.sessionID:
+                        client_b = requested_client
+                        break
+                if client_b != None:
+                    send_endnotif(client_b)
+
+            if data[0:11] == "HISTORY_REQ":
+                # print(MESSAGE)
+                chat_history.read_log("abcd", "efgh")
+
 
 def main():
-    global UDPsocket
-    print("[STARTING] server is starting...")
-    UDPsocket.bind((HOST_IP, UDP_PORT)) # UDP socket bound
-    print(f"[STARTING] server is running on {HOST_IP}:{UDP_PORT}")
 
-    while True:
-        message, addr = UDPsocket.recvfrom(1024) # buffer size is 1024 bytes
-        print("SERVER-received message: %s" % message)
-        parse(str(message, 'utf-8'), addr)
-        #
-        # # update client_B_ID--------------------------------
-        # client_B_ID = 'client789'
-        # print("client-A-ID is: ", client_A_ID)
-        # print("client-B-ID is: ", client_B_ID)
-        #
-        # #  sliced message to separate payload
-        # payload = str(data[9:], 'utf-8')
-        # print("payload is: ", payload)
-        # if payload[:7].lower().strip() == 'history':
-        #     print(payload[7:].lower().strip())
-        #     chat_history.read_log(client_A_ID, payload[7:].lower().strip())
-        #
-        # #  sliced message to separate payload
-        # if payload[:6].lower() == 'log on':
-        #     print("initiate log on")
-        #     connect("CONNECTED")
-        # clients= [client_A_ID, client_B_ID]
-        # #res = chat_started(clients, payload)
-        # #print(res)
+    logging.getLogger().setLevel(logging.DEBUG)
+    UDPHandler = threading.Thread(target=UDPServer)
+    TCPHandler = threading.Thread(target=TCPServer)
+
+    UDPHandler.start()
+    TCPHandler.start()
 
 main()
-
-# 1. Check if client is on list of subscribers
-# 2. Retrieve the client’s secret key and send a CHALLENGE (rand) message to the client, using UDP
-# 3. Wait for RESPONSE from client.
-# 4.1 If authentication is not successful, the server sends an AUTH_FAIL message to the client.
-# 4.2 Else generate an encryption key CK-A, then sends an AUTH_SUCCESS(rand_cookie, port_number) message to the client. The message is encrypted by CK-A.
-# From this point on, all data exchanged between client A and the server is encrypted using CK-A.
-# 5. Wait for TCP connection request from client.
-# From this point on, until the TCP connection is closed, all data (signaling messages and chat) is exchanged over the TCP connection.
-# 6. The server sends CONNECTED to the client. The client is connected.
-# 7. If client types “Log off” or when the activity timer expires, the TCP connection is closed.
-
-# Client A Initiates Chat Session to B
-# This scenario will go through the following steps.
-# Client A must have already gone through the connection phase and be connected to the server.
-#     End user types “Chat Client-ID-B” (client A sends a CHAT_REQUEST (Client-ID-B)).
-#         - If the server determines client-B is connected and not already engaged in another chat session
-#             1. The server sends CHAT_STARTED(session-ID, Client-ID-B) to client A
-#             2. The server sends CHAT_STARTED(session-ID, Client-ID-A) to client B
-#             3. Client A and Client B are now engaged in a chat session and can send chat messages with each other, through the server.
-#             4. The clients display “Chat started” to the end user at A and B.
-#         - If client B is not available, the server sends UNREACHABLE (Client-ID-B) to client A.
-#
-# Client A or B chooses to end chat session.
-#     End user types “End Chat”, (Client sends END_REQUEST (session-ID) to the server).
-#         1. The server sends an END_NOTIF(session-ID) to the other client.
-#         2. The Clients display “Chat ended” to their respective end users.
