@@ -169,8 +169,7 @@ class TCPServer:
                 else:
                     logging.info('Client %s cannot be connected. Rand_Cookie invalid!', current_client.client_address)
 
-            # S:Think if to include Client A connected messaged should be parsed through this or not
-            if data[0:12] == "CHAT_REQUEST":
+            elif data[0:12] == "CHAT_REQUEST":
                 client_id = data[13:-1]
                 client_a = current_client
                 client_b = None
@@ -202,7 +201,7 @@ class TCPServer:
                     # History needs to happen Here
                     print("chat_history.write_log()")
 
-            if data[0:11] == "END_REQUEST":
+            elif data[0:11] == "END_REQUEST":
                 sessionID = data[12:-1]
                 client_a = current_client
                 client_b = None
@@ -211,9 +210,11 @@ class TCPServer:
                         client_b = requested_client
                         break
                 if client_b != None:
+                    current_client.sessionID = None
+                    self.clients_list[self.clients_list.index(client_b)].sessionID = None
                     send_endnotif(client_b)
 
-            if data[0:11] == "HISTORY_REQ":
+            elif data[0:11] == "HISTORY_REQ":
                 # print(MESSAGE)
                 chat_history.read_log("abcd", "efgh")
 

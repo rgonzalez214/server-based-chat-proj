@@ -182,7 +182,7 @@ class Client:
             # Decrypting hashed messages
             fernet = Fernet(self.ciphering_key)
             data = fernet.decrypt(data)
-            print(data)
+            # print(data)
             if str(data[0:9], 'utf-8') == "CONNECTED":
                 print(f"[SYSTEM] Connected to the chat server! Welcome, {self.client_id}.")
 
