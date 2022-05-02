@@ -339,7 +339,7 @@ See the [open issues](https://github.com/github_username/repo_name/issues) for a
 
 
 
-| <img src="https://media-exp1.licdn.com/dms/image/C5603AQEdibgGk-rRnA/profile-displayphoto-shrink_400_400/0/1610149081150?e=1657152000&v=beta&t=OY81sdN1YXI1LT34Y1EmuYp2J99-cla9os6tGkNlK-U" alt="Logo" width="80px"> |<img src="image/avaimg.png" alt="Logo" width="80px">| <img src="image/avaimg.png" alt="Logo" width="80px"> | <img src="image/avaimg.png" alt="Logo" width="80px"> |
+| <img src="https://media-exp1.licdn.com/dms/image/C5603AQEdibgGk-rRnA/profile-displayphoto-shrink_400_400/0/1610149081150?e=1657152000&v=beta&t=OY81sdN1YXI1LT34Y1EmuYp2J99-cla9os6tGkNlK-U" alt="Logo" width="80px"> |<img src="https://avatars.githubusercontent.com/u/46317327?v=4" alt="Logo" width="80px">| <img src="image/avaimg.png" alt="Logo" width="80px"> | <img src="image/avaimg.png" alt="Logo" width="80px"> |
 |------------------------------------------------------| ------------- |------------------------------------------------------|---------------------------------------------------|
 | [@Kantancoder](https://twitter.com/kantancoder)      | [@ThanosWasTaken](https://twitter.com/ThanosWasTaken)  | [@Your_Name](https://twitter.com/Your_Name)          | [@Adrian](https://twitter.com/Your_Name)          | 
 | rogonzalez214@gmail.com                              | surya.modern.work@gmail.com | email@email_client.com                               | adriansanchez68.as@gmail.com                      |
