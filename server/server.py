@@ -44,6 +44,7 @@ transitioning_client = None
 
 class Client:
     def __init__(self, client_address):
+        self.sock = None
         self.client_address = client_address
         self.client_connection = None
         self.authenticated = False
@@ -60,7 +61,6 @@ class UDPServer:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Welcoming socket for UDP
         self.sock.bind((HOST_IP, UDP_PORT))
         self.clients_list = []
-
         while True:
             self.wait_for_client()
 
@@ -87,7 +87,6 @@ class UDPServer:
 
                 if not client_exists:
                     self.clients_list.append(newClient)
-                    logging.info("UDP: New Client Connection Registered")
 
             process_response = threading.Thread(target=self.handle_client(data, newClient))
             process_response.start()

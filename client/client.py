@@ -1,6 +1,8 @@
 import socket
 import threading
 import time
+from _thread import start_new_thread
+
 from encodings.base64_codec import base64_encode
 from threading import Timer
 import logging
@@ -10,7 +12,8 @@ from cryptography.fernet import Fernet
 from common import algorithms
 
 SERVER_IP = "127.0.0.1"
-PORT = 8008
+UDP_PORT = 8008
+TCP_PORT = None
 
 # Function to assign each client an ID which is not part of usedClientIDs (currently active clients)
 def AssignIDandKey():
@@ -30,16 +33,20 @@ def AssignIDandKey():
         print("Could not assign ID, too many active users! Please try again later. No free lunch in Life :)\n")
         return "InvalidUser", None
 
+
 # Function to Authorize client on typing "log on"
 def send_hello(sock, client_id):
-    sock.sendto(bytes(f"HELLO({client_id})", 'utf-8'), (SERVER_IP, PORT))
+    sock.sendto(bytes(f"HELLO({client_id})", 'utf-8'), (SERVER_IP, UDP_PORT))
+
 
 def send_response(sock, client_id, Res):
-    sock.sendto(bytes(f"RESPONSE({client_id},{Res})", 'utf-8'), (SERVER_IP, PORT))
+    sock.sendto(bytes(f"RESPONSE({client_id},{Res})", 'utf-8'), (SERVER_IP, UDP_PORT))
+
 
 def send_connect(sock, rand_cookie, ciphering_key):
     fernet = Fernet(ciphering_key)
     sock.send(fernet.encrypt(bytes(f"CONNECT({rand_cookie})", 'utf-8')))
+
 
 def send_chat_request(sock, client_id, ciphering_key):
     fernet = Fernet(ciphering_key)
@@ -49,19 +56,20 @@ def send_chat_request(sock, client_id, ciphering_key):
 class Client:
     def __init__(self):
 
-            self.client_id, self.secret_key = AssignIDandKey()
-            self.client_connection = None
-            self.rand = None
-            self.rand_cookie = None
-            self.Res = None
-            self.ciphering_key = None
-            self.protocol = "UDP"
-            self.recv_buffer = ""
+        self.client_id, self.secret_key = AssignIDandKey()
+        self.client_connection = None
+        self.rand = None
+        self.rand_cookie = None
+        self.Res = None
+        self.ciphering_key = None
+        self.recv_buffer = ""
 
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-            input_thread = threading.Thread(target=self.Sender())
-            input_thread.start()
+        input_thread = threading.Thread(target=self.Sender())
+        input_thread.start()
+
 
     # Function to parse each message input by the client into protocol messages
     def Sender(self):
@@ -72,11 +80,11 @@ class Client:
                 if client_input == "log on":
                     # Sending HELLO(Client-ID) to the server
                     print("[SYSTEM] Logging in to server... (Sending HELLO)")
-                    send_hello(self.sock, self.client_id)
+                    send_hello(self.udp_sock, self.client_id)
 
                     # Waiting for CHALLENGE(rand)
-                    self.sock.settimeout(10)
-                    data, server_address = self.sock.recvfrom(1024)
+                    self.udp_sock.settimeout(10)
+                    data, server_address = self.udp_sock.recvfrom(1024)
 
                     # CHALLENGE(rand) received
                     if str(data[0:9], 'utf-8') == "CHALLENGE":
@@ -85,12 +93,13 @@ class Client:
 
                         # Sending RESPONSE(Client-ID, Res) to the server
                         print("[SYSTEM] CHALLENGE received! (Sending RESPONSE)")
-                        self.ciphering_key, size = base64_encode(bytes(algorithms.a8(self.rand, self.secret_key), 'utf-8'))
-                        send_response(self.sock, self.client_id, self.Res)
+                        self.ciphering_key, size = base64_encode(
+                            bytes(algorithms.a8(self.rand, self.secret_key), 'utf-8'))
+                        send_response(self.udp_sock, self.client_id, self.Res)
 
                         # Waiting for AUTH_SUCCESS(random_cookie, TCP_Port) or AUTH FAIL
-                        self.sock.settimeout(10)
-                        data, server_address = self.sock.recvfrom(1024)
+                        self.udp_sock.settimeout(10)
+                        data, server_address = self.udp_sock.recvfrom(1024)
 
                         # AUTH__ received
                         if str(data[0:9], 'utf-8') == "AUTH_FAIL":
@@ -98,19 +107,16 @@ class Client:
                         else:
                             fernet = Fernet(self.ciphering_key)
                             data = fernet.decrypt(data)
-                            logging.info(data)
                             if str(data[0:12], 'utf-8') == "AUTH_SUCCESS":
                                 print("[SYSTEM] Successfully Authenticated. Connecting to Chat Server...")
                                 data = str(data, 'utf-8').split(",")
                                 self.rand_cookie = data[0][13:]
-                                global PORT
-                                PORT = int(data[1][:-1])
-                                self.protocol = "TCP"
-                                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                                self.sock.connect((SERVER_IP, PORT))
-                                send_connect(self.sock, self.rand_cookie, self.ciphering_key)
-                                output_thread = threading.Thread(target=self.Receiver())
-                                output_thread.start()
+                                global TCP_PORT
+                                TCP_PORT = int(data[1][:-1])
+                                self.tcp_sock.connect((SERVER_IP, TCP_PORT))
+
+                                start_new_thread(self.Receiver,(self.tcp_sock,))
+                                send_connect(self.tcp_sock, self.rand_cookie, self.ciphering_key)
 
                 elif client_input[0:4] == "chat":
                     f1 = open("clientsIDs.txt", 'r')
@@ -125,7 +131,7 @@ class Client:
                                 print("[SYSTEM] Please enter a correct 10 digit client-ID")
                     except TypeError:
                         raise TypeError
-                    send_chat_request(self.sock, clientID, self.ciphering_key)
+                    send_chat_request(self.tcp_sock, clientID, self.ciphering_key)
 
                 elif input == "log off":
                     print("Exiting Program")
@@ -138,24 +144,23 @@ class Client:
             except TypeError:
                 print("[ERROR] Invalid Input")
 
-
     # Processes UDP/TCP Protocol messages
-    def Receiver(self):
+    def Receiver(self, tcp_sock):
         while True:
-            data = self.sock.recv(1024)
+            data = self.tcp_sock.recv(1024)
 
             # Decrypting hashed messages
             fernet = Fernet(self.ciphering_key)
             data = fernet.decrypt(data)
-            logging.info(data)
-            if str(data[0:9],'utf-8') == "CONNECTED":
+            if str(data[0:9], 'utf-8') == "CONNECTED":
                 print(f"[SYSTEM] Connected to the chat server! Welcome, {self.client_id}.")
 
-def main():
 
+def main():
     logging.getLogger().setLevel(logging.DEBUG)
     CurrentClient = threading.Thread(target=Client)
     CurrentClient.start()
+
 
 main()
 
