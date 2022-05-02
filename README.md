@@ -180,7 +180,7 @@ HISTORY_RESP message for each chat message in the history.
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="image/ServerSideConnectRevised.drawio.png" alt="conn" width="480px">
   
 #### Chat Phase
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="C:image/ServerSideChat.drawio.png" alt="conn" width="480">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="image/ServerSideChat.drawio.png" alt="conn" width="480">
 
 <br/>
 
