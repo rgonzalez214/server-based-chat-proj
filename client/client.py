@@ -140,6 +140,25 @@ class Client:
                     send_chat_request(self.tcp_sock, self.sessionID, fernet)
                     print("[SYSTEM] CHAT ENDED!")
 
+                elif client_input[:7] == "history":
+                    try:
+                        global temp_client
+                        global hist_log
+                        client_b = client_input[8:18].replace(" ", "")
+                        if len(hist_log) > 0 and temp_client == client_b:
+                            print(hist_log[-1])
+                            hist_log.pop(-1)
+                        #     will need to clear hist_log somewhere if new messages are saved in log
+                        else:
+                            # fetch history response through TCP
+                            print("[PROTOCOL] Sending chat history request to server...")
+                            print("prospective client_B ", client_b)
+                            send_history_request(self.sock, client_b)
+
+                            hist_log = self.sock.recvfrom(1024)
+                    except IndexError:
+                        print('No history available')
+
                 elif client_input == "log off":
                     print("[SYSTEM] Exiting Program")
                     print("[END] Thank you for participating in our chat bot!")

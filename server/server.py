@@ -37,14 +37,11 @@ def send_chat_started(sessionID, currentClient, requestedClient):
 def send_unreachable(currentClient, fernet):
     currentClient.client_connection.send(fernet.encrypt(bytes("CONNECTED", "utf-8")))
 
-def send_endnotif(requestedClient):
+def send_endnotif(sessionID, requestedClient):
     fernet = Fernet(requestedClient.ciphering_key)
     requestedClient.client_connection.send(fernet.encrypt(bytes(f"END_NOTIF({requestedClient.sessionID})", "utf-8")))
 
-def send_req(currentClient):
-
-
-def send_resp(requestedClient):
+def send_history_resp(currentClient, requestedClient, message):
 
 
 transitioning_client = None
