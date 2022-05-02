@@ -50,6 +50,11 @@ def send_connect(sock, rand_cookie, fernet):
 def send_chat_request(sock, client_id, fernet):
     sock.send(fernet.encrypt(bytes(f"CHAT_REQUEST({client_id})", 'utf-8')))
 
+def send_chat(sock, sessionID, client_input, fernet):
+    sock.send(fernet.encrypt(bytes(f"CHAT({sessionID},{client_input})", 'utf-8')))
+
+def send_end_request(sock, sessionID, fernet):
+    sock.send(fernet.encrypt(bytes(f"END_REQUEST({sessionID})", 'utf-8')))
 
 class Client:
     def __init__(self):
@@ -73,100 +78,102 @@ class Client:
     # Function to parse each message input by the client into protocol messages
     def Sender(self):
         while True:
-            try:
                 time.sleep(1)
                 client_input = input(f"{self.client_id} > ")
                 # Authentication Phase on typing in "log on"
-                if client_input == "log on":
-                    # Sending HELLO(Client-ID) to the server
-                    print("[SYSTEM] Logging in to server... (Sending HELLO)")
-                    send_hello(self.udp_sock, self.client_id)
+                if self.sessionID == None:
+                    if client_input == "log on":
+                        # Sending HELLO(Client-ID) to the server
+                        print("[SYSTEM] Logging in to server... (Sending HELLO)")
+                        send_hello(self.udp_sock, self.client_id)
 
-                    # Waiting for CHALLENGE(rand)
-                    self.udp_sock.settimeout(10)
-                    data, server_address = self.udp_sock.recvfrom(1024)
-
-                    # CHALLENGE(rand) received
-                    if str(data[0:9], 'utf-8') == "CHALLENGE":
-                        self.rand = str(data[10:-1], 'utf-8')
-                        self.Res = algorithms.a3(self.rand, self.secret_key)
-
-                        # Sending RESPONSE(Client-ID, Res) to the server
-                        print("[SYSTEM] CHALLENGE received! (Sending RESPONSE)")
-                        self.ciphering_key, size = base64_encode(
-                            bytes(algorithms.a8(self.rand, self.secret_key), 'utf-8'))
-                        send_response(self.udp_sock, self.client_id, self.Res)
-
-                        # Waiting for AUTH_SUCCESS(random_cookie, TCP_Port) or AUTH FAIL
+                        # Waiting for CHALLENGE(rand)
                         self.udp_sock.settimeout(10)
                         data, server_address = self.udp_sock.recvfrom(1024)
 
-                        # AUTH__ received
-                        if str(data[0:9], 'utf-8') == "AUTH_FAIL":
-                            print("[SYSTEM] Unable to authenticate, please try again with valid credentials!")
-                        else:
-                            fernet = Fernet(self.ciphering_key)
-                            data = fernet.decrypt(data)
-                            if str(data[0:12], 'utf-8') == "AUTH_SUCCESS":
-                                print("[SYSTEM] Successfully Authenticated. Connecting to Chat Server...")
-                                data = str(data, 'utf-8').split(",")
-                                self.rand_cookie = data[0][13:]
-                                global TCP_PORT
-                                TCP_PORT = int(data[1][:-1])
-                                self.tcp_sock.connect((SERVER_IP, TCP_PORT))
+                        # CHALLENGE(rand) received
+                        if str(data[0:9], 'utf-8') == "CHALLENGE":
+                            self.rand = str(data[10:-1], 'utf-8')
+                            self.Res = algorithms.a3(self.rand, self.secret_key)
 
-                                start_new_thread(self.Receiver,(self.tcp_sock,))
-                                send_connect(self.tcp_sock, self.rand_cookie, fernet)
+                            # Sending RESPONSE(Client-ID, Res) to the server
+                            print("[SYSTEM] CHALLENGE received! (Sending RESPONSE)")
+                            self.ciphering_key, size = base64_encode(
+                                bytes(algorithms.a8(self.rand, self.secret_key), 'utf-8'))
+                            send_response(self.udp_sock, self.client_id, self.Res)
 
-                elif client_input[0:4] == "chat":
-                    f1 = open("clientsIDs.txt", 'r')
-                    clients = f1.readlines()
-                    clientID = None
-                    try:
-                        for client in clients:
-                            if client_input[5:15] == client[0:10]:
-                                clientID = client_input[5:15]
-                                break
+                            # Waiting for AUTH_SUCCESS(random_cookie, TCP_Port) or AUTH FAIL
+                            self.udp_sock.settimeout(10)
+                            data, server_address = self.udp_sock.recvfrom(1024)
 
-                        if clientID == None:
-                            print("[SYSTEM] Please enter a correct 10 digit client-ID")
-                    except TypeError:
-                        raise TypeError
-                    fernet = Fernet(self.ciphering_key)
-                    send_chat_request(self.tcp_sock, clientID, fernet)
+                            # AUTH__ received
+                            if str(data[0:9], 'utf-8') == "AUTH_FAIL":
+                                print("[SYSTEM] Unable to authenticate, please try again with valid credentials!")
+                            else:
+                                fernet = Fernet(self.ciphering_key)
+                                data = fernet.decrypt(data)
+                                if str(data[0:12], 'utf-8') == "AUTH_SUCCESS":
+                                    print("[SYSTEM] Successfully Authenticated. Connecting to Chat Server...")
+                                    data = str(data, 'utf-8').split(",")
+                                    self.rand_cookie = data[0][13:]
+                                    global TCP_PORT
+                                    TCP_PORT = int(data[1][:-1])
+                                    self.tcp_sock.connect((SERVER_IP, TCP_PORT))
 
-                elif client_input[0:4] == "End chat":
-                    fernet = Fernet(self.ciphering_key)
-                    send_chat_request(self.tcp_sock, self.sessionID, fernet)
-                    print("[SYSTEM] CHAT ENDED!")
+                                    start_new_thread(self.Receiver,(self.tcp_sock,))
+                                    send_connect(self.tcp_sock, self.rand_cookie, fernet)
 
-                elif client_input[:7] == "history":
-                    try:
-                        global temp_client
-                        global hist_log
-                        client_b = client_input[8:18].replace(" ", "")
-                        if len(hist_log) > 0 and temp_client == client_b:
-                            print(hist_log[-1])
-                            hist_log.pop(-1)
-                        #     will need to clear hist_log somewhere if new messages are saved in log
-                        else:
-                            # fetch history response through TCP
-                            print("[PROTOCOL] Sending chat history request to server...")
-                            print("prospective client_B ", client_b)
-                            send_history_request(self.sock, client_b)
+                    elif client_input[0:4] == "chat":
+                        f1 = open("clientsIDs.txt", 'r')
+                        clients = f1.readlines()
+                        clientID = None
+                        try:
+                            for client in clients:
+                                if client_input[5:15] == client[0:10]:
+                                    clientID = client_input[5:15]
+                                    break
 
-                            hist_log = self.sock.recvfrom(1024)
-                    except IndexError:
-                        print('No history available')
+                            if clientID == None:
+                                print("[SYSTEM] Please enter a correct 10 digit client-ID")
+                        except TypeError:
+                            raise TypeError
+                        fernet = Fernet(self.ciphering_key)
+                        send_chat_request(self.tcp_sock, clientID, fernet)
 
-                elif client_input == "log off":
-                    print("[SYSTEM] Exiting Program")
-                    print("[END] Thank you for participating in our chat bot!")
-                    self.tcp_sock.close()
-                    exit(0)
+                    elif client_input[:7] == "history":
+                        try:
+                            global temp_client
+                            global hist_log
+                            client_b = client_input[8:18].replace(" ", "")
+                            if len(hist_log) > 0 and temp_client == client_b:
+                                print(hist_log[-1])
+                                hist_log.pop(-1)
+                            #     will need to clear hist_log somewhere if new messages are saved in log
+                            else:
+                                # fetch history response through TCP
+                                print("[PROTOCOL] Sending chat history request to server...")
+                                print("prospective client_B ", client_b)
+                                # send_history_request(self.sock, client_b)
 
-            except TypeError:
-                print("[ERROR] Invalid Input")
+                                hist_log = self.sock.recvfrom(1024)
+                        except IndexError:
+                            print('No history available')
+
+                    elif client_input == "log off":
+                        print("[SYSTEM] Exiting Program")
+                        print("[END] Thank you for participating in our chat bot!")
+                        self.tcp_sock.close()
+                        exit(0)
+                # While Session is engaged
+                else:
+                    if client_input[0:8] == "End chat":
+                        fernet = Fernet(self.ciphering_key)
+                        send_end_request(self.tcp_sock, self.sessionID, fernet)
+                        print("[SYSTEM] CHAT ENDED!")
+                    else:
+                        fernet = Fernet(self.ciphering_key)
+                        send_chat(self.tcp_sock, self.sessionID, client_input, fernet)
+
 
     # Processes UDP/TCP Protocol messages
     def Receiver(self, tcp_sock):
@@ -179,10 +186,22 @@ class Client:
             if str(data[0:9], 'utf-8') == "CONNECTED":
                 print(f"[SYSTEM] Connected to the chat server! Welcome, {self.client_id}.")
 
-            if str(data[0:12], 'utf-8') == "CHAT_STARTED":
+            elif str(data[0:12], 'utf-8') == "CHAT_STARTED":
                 self.sessionID = str(data[13:23], 'utf-8')
                 self.session_client = str(data[24:-1], 'utf-8')
-                print(f"[{self.sessionID}] CHAT STARTED with {self.session_client}!")
+                print(f"[{self.sessionID}] CHAT STARTED with {self.session_client} (SESSION_ID: {self.sessionID})!")
+
+            elif str(data[0:4], 'utf-8') == "CHAT":
+                data = str(data, 'utf-8').split(',')
+                self.sessionID = data[0][5:]
+                self.message = data[1][:-1]
+                print(f"[{self.sessionID}] {self.message}")
+
+            elif str(data[0:9], 'utf-8') == "END_NOTIF":
+                sessionID = str(data[10:-1], 'utf-8')
+                self.sessionID = None
+                self.session_client = None
+                print(f"[{sessionID}] Chat ended by another client {self.client_id}.")
 
 
 def main():

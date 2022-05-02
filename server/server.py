@@ -16,11 +16,9 @@ UDP_PORT = 8008
 TCP_PORT = 4761
 
 def send_challenge(sock, currentClient, rand):
-    logging.info('Sending CHALLENGE to client %s ', currentClient.client_address)
     sock.sendto(bytes(f"CHALLENGE({rand})", "utf-8"), currentClient.client_address)
 
 def send_auth_success(sock, currentClient, fernet):
-    logging.info('Sending AUTH_SUCCESS to client %s ', currentClient.client_address)
     sock.sendto(fernet.encrypt(bytes(f"AUTH_SUCCESS({currentClient.rand},{TCP_PORT})", "utf-8")), currentClient.client_address)
 
 def send_auth_fail(sock, currentClient):
@@ -34,15 +32,20 @@ def send_chat_started(sessionID, currentClient, requestedClient):
     fernet = Fernet(currentClient.ciphering_key)
     currentClient.client_connection.send(fernet.encrypt(bytes(f"CHAT_STARTED({sessionID},{requestedClient.client_id})", "utf-8")))
 
-def send_unreachable(currentClient, fernet):
-    currentClient.client_connection.send(fernet.encrypt(bytes("CONNECTED", "utf-8")))
+def send_unreachable(currentClient, requestedClient):
+    fernet = Fernet(currentClient.ciphering_key)
+    currentClient.client_connection.send(fernet.encrypt(bytes(f"UNREACHABLE({requestedClient.client_id})", "utf-8")))
 
-def send_endnotif(sessionID, requestedClient):
+def send_endnotif(requestedClient):
     fernet = Fernet(requestedClient.ciphering_key)
     requestedClient.client_connection.send(fernet.encrypt(bytes(f"END_NOTIF({requestedClient.sessionID})", "utf-8")))
 
-def send_history_resp(currentClient, requestedClient, message):
+def send_chat(currentClient, requestedClient, message):
+    fernet = Fernet(requestedClient.ciphering_key)
+    requestedClient.client_connection.send(fernet.encrypt(bytes(f"CHAT({currentClient.sessionID},{message})", "utf-8")))
 
+def send_history_resp(currentClient, requestedClient, message):
+    pass
 
 transitioning_client = None
 
@@ -74,12 +77,10 @@ class UDPServer:
             # Receive data from client
             data, client_address = self.sock.recvfrom(1024)
             newClient = Client(client_address)
-            logging.info('Received data from client %s: %s', newClient.client_address, data)
 
             # Add client to list of clients
             if self.clients_list == []:
                 self.clients_list.append(newClient)
-                logging.info("UDP: New Client Connection Registered")
             else:
                 # Checking to see if the client exists on the current list of clients or not
                 client_exists = False
@@ -128,7 +129,6 @@ class UDPServer:
                 fernet = Fernet(current_client.ciphering_key)
                 send_auth_success(self.sock, current_client, fernet)
                 global transitioning_client
-                print(transitioning_client, "udp")
                 while transitioning_client != None:
                     time.sleep(1)
                 transitioning_client = current_client
@@ -148,17 +148,12 @@ class TCPServer:
 
             current_client = transitioning_client
             connection, client_address = self.sock.accept()
-            logging.info(client_address)
             current_client.client_connection = connection
             current_client.client_address = client_address
-            logging.info(client_address)
 
             # Add client to list of clients
             self.clients_list.append(current_client)
-            logging.info("TCP: New Client Connection Registered")
-            logging.info(self.clients_list)
             transitioning_client = None
-            print(transitioning_client)
             start_new_thread(self.handle_client, (current_client, ))
 
     def handle_client(self, current_client):
@@ -167,9 +162,9 @@ class TCPServer:
             logging.info(f"Received on TCP: {data}")
             fernet = Fernet(current_client.ciphering_key)
             data = str(fernet.decrypt(data), 'utf-8')
+            logging.info(f"Received on TCP: {data}")
             if data[0:7] == "CONNECT":
                 if current_client.rand == data[8:-1]:
-                    logging.info('Sending CONNECTED to client %s ', current_client.client_address)
                     send_connected(current_client, fernet)
                 else:
                     logging.info('Client %s cannot be connected. Rand_Cookie invalid!', current_client.client_address)
@@ -183,24 +178,40 @@ class TCPServer:
                     if client_id == requested_client.client_id:
                         client_b = requested_client
                         break
-                if client_b != None:
+                if client_b != None and client_b.sessionID == None:
                     sessionID = algorithms.create_sessionID()
                     client_a.sessionID = sessionID
                     client_b.sessionID = sessionID
                     send_chat_started(sessionID, client_a, client_b)
                     send_chat_started(sessionID, client_b, client_a)
+                else:
+                    send_unreachable(client_a, client_b)
 
-            # elif not client_available:
-                #     print(MESSAGE)
-                #     unavailable()
+            elif data[0:4] == "CHAT":
+                data = data.split(",")
+                sessionID = data[0][5:]
+                message = data[1][:-1]
+                client_a = current_client
+                client_b = None
+                for requested_client in self.clients_list:
+                    if client_a.client_id != requested_client.client_id:
+                        client_b = requested_client
+                        break
+                if client_b != None:
+                    send_chat(client_a, client_b, message)
+                    # History needs to happen Here
+                    print("chat_history.write_log()")
 
             if data[0:11] == "END_REQUEST":
-                # print(MESSAGE)
-                send_end_notif()
-
-            if data[0:4] == "CHAT":
-                # print(MESSAGE)
-                print("chat_history.write_log()")
+                sessionID = data[12:-1]
+                client_a = current_client
+                client_b = None
+                for requested_client in self.clients_list:
+                    if client_a.client_id != requested_client.client_id and sessionID == requested_client.sessionID:
+                        client_b = requested_client
+                        break
+                if client_b != None:
+                    send_endnotif(client_b)
 
             if data[0:11] == "HISTORY_REQ":
                 # print(MESSAGE)
