@@ -12,6 +12,10 @@ def a8(rand, key):
     combo = str(rand) + str(key)
     hashed = hashlib.md5(combo.encode('utf-8')).hexdigest()
     return hashed
+
+def create_sessionID():
+    return secrets.token_hex(5)
+
 def rand_num():
     nums = secrets.token_hex(8)
     return nums

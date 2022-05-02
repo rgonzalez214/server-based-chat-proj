@@ -41,106 +41,113 @@ def send_connect(sock, rand_cookie, ciphering_key):
     fernet = Fernet(ciphering_key)
     sock.send(fernet.encrypt(bytes(f"CONNECT({rand_cookie})", 'utf-8')))
 
-def chat_request(Client_ID_X):
-    pass
+def send_chat_request(sock, client_id, ciphering_key):
+    fernet = Fernet(ciphering_key)
+    sock.send(fernet.encrypt(bytes(f"CHAT_REQUEST({client_id})", 'utf-8')))
 
 
 class Client:
     def __init__(self):
-        self.client_id, self.secret_key = AssignIDandKey()
-        self.rand = None
-        self.rand_cookie = None
-        self.Res = None
-        self.ciphering_key = None
-        self.protocol = "UDP"
-        self.recv_buffer = ""
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.client_id, self.secret_key = AssignIDandKey()
+            self.client_connection = None
+            self.rand = None
+            self.rand_cookie = None
+            self.Res = None
+            self.ciphering_key = None
+            self.protocol = "UDP"
+            self.recv_buffer = ""
 
-        not_listening = True
-        while True:
-            client_input = input(f"{self.client_id} > ")
-            self.Parser(client_input)
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-            if self.protocol == "TCP" and not_listening:
-                # receive_messages = threading.Thread(target=self.Receiver())
-                # receive_messages.start()
-                not_listening = False
-
-            # Output buffered messages after receiving client input
+            input_thread = threading.Thread(target=self.Sender())
+            input_thread.start()
 
     # Function to parse each message input by the client into protocol messages
-    def Parser(self, client_input):
+    def Sender(self):
+        while True:
+            try:
+                client_input = input(f"{self.client_id} > ")
+                # Authentication Phase on typing in "log on"
+                if client_input == "log on":
+                    # Sending HELLO(Client-ID) to the server
+                    print("[SYSTEM] Logging in to server... (Sending HELLO)")
+                    send_hello(self.sock, self.client_id)
 
-        # Authentication Phase on typing in "log on"
-        if client_input == "log on":
-            # Sending HELLO(Client-ID) to the server
-            print("[SYSTEM] Logging in to server... (Sending HELLO)")
-            send_hello(self.sock, self.client_id)
+                    # Waiting for CHALLENGE(rand)
+                    self.sock.settimeout(10)
+                    data, server_address = self.sock.recvfrom(1024)
 
-            # Waiting for CHALLENGE(rand)
-            self.sock.settimeout(10)
-            data, server_address = self.sock.recvfrom(1024)
+                    # CHALLENGE(rand) received
+                    if str(data[0:9], 'utf-8') == "CHALLENGE":
+                        self.rand = str(data[10:-1], 'utf-8')
+                        self.Res = algorithms.a3(self.rand, self.secret_key)
 
-            # CHALLENGE(rand) received
-            if str(data[0:9], 'utf-8') == "CHALLENGE":
-                self.rand = str(data[10:-1], 'utf-8')
-                self.Res = algorithms.a3(self.rand, self.secret_key)
+                        # Sending RESPONSE(Client-ID, Res) to the server
+                        print("[SYSTEM] CHALLENGE received! (Sending RESPONSE)")
+                        self.ciphering_key, size = base64_encode(bytes(algorithms.a8(self.rand, self.secret_key), 'utf-8'))
+                        send_response(self.sock, self.client_id, self.Res)
 
-                # Sending RESPONSE(Client-ID, Res) to the server
-                print("[SYSTEM] CHALLENGE received! (Sending RESPONSE)")
-                self.ciphering_key, size = base64_encode(bytes(algorithms.a8(self.rand, self.secret_key), 'utf-8'))
-                send_response(self.sock, self.client_id, self.Res)
+                        # Waiting for AUTH_SUCCESS(random_cookie, TCP_Port) or AUTH FAIL
+                        self.sock.settimeout(10)
+                        data, server_address = self.sock.recvfrom(1024)
 
-                # Waiting for AUTH_SUCCESS(random_cookie, TCP_Port) or AUTH FAIL
-                self.sock.settimeout(10)
-                data, server_address = self.sock.recvfrom(1024)
+                        # AUTH__ received
+                        if str(data[0:9], 'utf-8') == "AUTH_FAIL":
+                            print("[SYSTEM] Unable to authenticate, please try again with valid credentials!")
+                        else:
+                            fernet = Fernet(self.ciphering_key)
+                            data = fernet.decrypt(data)
+                            logging.info(data)
+                            if str(data[0:12], 'utf-8') == "AUTH_SUCCESS":
+                                print("[SYSTEM] Successfully Authenticated. Connecting to Chat Server...")
+                                data = str(data, 'utf-8').split(",")
+                                self.rand_cookie = data[0][13:]
+                                global PORT
+                                PORT = int(data[1][:-1])
+                                self.protocol = "TCP"
+                                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                self.sock.connect((SERVER_IP, PORT))
+                                send_connect(self.sock, self.rand_cookie, self.ciphering_key)
+                                output_thread = threading.Thread(target=self.Receiver())
+                                output_thread.start()
 
-                # AUTH__ received
-                if str(data[0:9], 'utf-8') == "AUTH_FAIL":
-                    print("[SYSTEM] Unable to authenticate, please try again with valid credentials!")
+                elif client_input[0:4] == "chat":
+                    f1 = open("clientsIDs.txt", 'r')
+                    clients = f1.readlines()
+                    clientID = None
+                    try:
+                        for client in clients:
+                            if client_input[5:15] == client[0:10]:
+                                clientID = client_input[5:15]
+                                break
+                            else:
+                                print("[SYSTEM] Please enter a correct 10 digit client-ID")
+                    except TypeError:
+                        raise TypeError
+                    send_chat_request(self.sock, clientID, self.ciphering_key)
+
+                elif input == "log off":
+                    print("Exiting Program")
+                    print("Thank you for participating in our chat bot!")
+                    exit(0)
+
                 else:
-                    self.Processor(data)
+                    print("[NOTIFICATION] User not logged in, type \"log in\" to connect to the chat server")
 
-        elif input == "log off":
-            print("Exiting Program")
-            print("Thank you for participating in our chat bot!")
-            exit(0)
+            except TypeError:
+                print("[ERROR] Invalid Input")
 
-        else:
-            print("[NOTIFICATION] User not logged in, type \"log in\" to connect to the chat server")
-
-        # if "Chat Client-ID-" in input:
-        #     print(f"\nRequesting chat session with ", input[5:16])
-        #     chat_request(input[5:16])
-
-    # # Driver function for receiving UDP/TCP Protocol messages
-    # def Receiver(self):
-    #     while protocol = :
-    #         data, server_address = self.sock.recvfrom(1024)
-    #         process_response = threading.Thread(target=self.Processor(data))
-    #         process_response.start()
 
     # Processes UDP/TCP Protocol messages
-    def Processor(self, data):
+    def Receiver(self):
+        while True:
+            data = self.sock.recv(1024)
 
-        # Decrypting hashed messages
-        if self.protocol == "UDP":
+            # Decrypting hashed messages
             fernet = Fernet(self.ciphering_key)
             data = fernet.decrypt(data)
-            if str(data[0:12], 'utf-8') == "AUTH_SUCCESS":
-                print("[SYSTEM] Successfully Authenticated. Connecting to Chat Server...")
-                data = str(data, 'utf-8').split(",")
-                self.rand_cookie = data[0][13:]
-                global PORT
-                PORT = int(data[1][:-1])
-                self.protocol = "TCP"
-                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.sock.connect((SERVER_IP, PORT))
-                send_connect(self.sock, self.rand_cookie, self.ciphering_key)
-        else:
-            fernet = Fernet(self.ciphering_key)
-            data = fernet.decrypt(data)
+            logging.info(data)
             if str(data[0:9],'utf-8') == "CONNECTED":
                 print(f"[SYSTEM] Connected to the chat server! Welcome, {self.client_id}.")
 

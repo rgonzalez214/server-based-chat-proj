@@ -2,6 +2,8 @@ import socket
 import threading
 import logging
 import time
+from _thread import start_new_thread
+
 from cryptography.fernet import Fernet
 from encodings.base64_codec import base64_encode
 
@@ -25,13 +27,14 @@ def send_auth_fail(sock, currentClient):
     logging.info('Sending AUTH_FAIL to client %s ', currentClient.client_address)
     sock.sendto(bytes(f"AUTH_FAIL", "utf-8"), currentClient.client_address)
 
-def send_connected(sock, currentClient, fernet):
+def send_connected(currentClient, fernet):
     currentClient.client_connection.send(fernet.encrypt(bytes("CONNECTED", "utf-8")))
 
-def send_chat_started():
-    pass
+def send_chat_started(sessionID, currentClient, requestedClient, fernet):
+    currentClient.client_connection.send(fernet.encrypt(bytes(f"CHAT_STARTED({sessionID},{requestedClient.client_id}", "utf-8")))
 
-def send_unavailable():
+
+def send_unavailable(sock, currentClient, fernet):
     pass
 
 def send_end_notif():
@@ -49,7 +52,7 @@ class Client:
         self.ciphering_key = None
         self.rand = None
         self.XRES = None
-        self.session_ID = None
+        self.sessionID = None
 
 class UDPServer:
     def __init__(self):
@@ -122,6 +125,7 @@ class UDPServer:
                 fernet = Fernet(current_client.ciphering_key)
                 send_auth_success(self.sock, current_client, fernet)
                 global transitioning_client
+                print(transitioning_client, "udp")
                 while transitioning_client != None:
                     time.sleep(1)
                 transitioning_client = current_client
@@ -135,25 +139,24 @@ class TCPServer:
         self.clients_list = []
 
         while True:
+            global transitioning_client
+            while transitioning_client == None:
+                time.sleep(1)
 
-                global transitioning_client
-                while transitioning_client == None:
-                    time.sleep(1)
+            current_client = transitioning_client
+            connection, client_address = self.sock.accept()
+            logging.info(client_address)
+            current_client.client_connection = connection
+            current_client.client_address = client_address
+            logging.info(client_address)
 
-                current_client = transitioning_client
-                connection, client_address = self.sock.accept()
-
-                current_client.client_connection = connection
-                current_client.client_address = client_address
-                logging.info(client_address)
-
-                # Add client to list of clients
-                self.clients_list.append(current_client)
-                logging.info("TCP: New Client Connection Registered")
-                logging.info(self.clients_list)
-                process_response = threading.Thread(target=self.handle_client(current_client))
-                process_response.start()
-                transitioning_client = None
+            # Add client to list of clients
+            self.clients_list.append(current_client)
+            logging.info("TCP: New Client Connection Registered")
+            logging.info(self.clients_list)
+            transitioning_client = None
+            print(transitioning_client)
+            start_new_thread(self.handle_client, (current_client, ))
 
     def handle_client(self, current_client):
         while True:
@@ -164,16 +167,27 @@ class TCPServer:
             if data[0:7] == "CONNECT":
                 if current_client.rand == data[8:-1]:
                     logging.info('Sending CONNECTED to client %s ', current_client.client_address)
-                    send_connected(self.sock, current_client, fernet)
+                    send_connected(current_client, fernet)
                 else:
                     logging.info('Client %s cannot be connected. Rand_Cookie invalid!', current_client.client_address)
 
             # S:Think if to include Client A connected messaged should be parsed through this or not
             if data[0:12] == "CHAT_REQUEST":
-                # if client_available:
-                #     print(MESSAGE)
-                send_chat_started()
-                # elif not client_available:
+                client_id = data[13:-1]
+                client_a = current_client
+                client_b = None
+                for requested_client in self.clients_list:
+                    if client_id == requested_client.client_id:
+                        client_b = requested_client
+                        break
+                if client_b != None:
+                    sessionID = algorithms.create_sessionID()
+                    client_a.sessionID = sessionID
+                    client_b.sessionID = sessionID
+                    send_chat_started(sessionID, client_a, client_b, fernet)
+                    send_chat_started(sessionID, client_b, client_a, fernet)
+
+            # elif not client_available:
                 #     print(MESSAGE)
                 #     unavailable()
 
