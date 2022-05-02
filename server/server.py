@@ -215,7 +215,8 @@ class TCPServer:
 
             if data[0:11] == "HISTORY_REQ":
                 # print(MESSAGE)
-                chat_history.read_log("abcd", "efgh")
+                client_b = data[12:22]
+                send_history_resp(client_address, client_b)
 
 
 def main():

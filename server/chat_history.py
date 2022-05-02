@@ -17,64 +17,58 @@ def file_name(clients):
     # store a current list of all txt files found in 'files'
     txt_files = p.glob('*.txt')
     files = [x.name for x in txt_files if x.is_file()]
-    # print("current files available", "".join(files))
 
     # build the filename and validate the existence against the 'files' list.
-    f_name = f"{clients[0]}{clients[1]}.txt" if f"{clients[0]}{clients[1]}.txt" in files \
-        else f"{clients[1]}{clients[0]}.txt" if f"{clients[1]}{clients[0]}.txt" in files \
+    f_name = f"{clients[0]}_{clients[1]}.txt" if f"{clients[0]}_{clients[1]}.txt" in files \
+        else f"{clients[1]}_{clients[0]}.txt" if f"{clients[1]}_{clients[0]}.txt" in files \
         else f"no_file"
     if f_name == 'no_file':
-        f_name = f"{clients[0]}{clients[1]}.txt"
+        f_name = f"{clients[0]}_{clients[1]}.txt"
         f1 = open(f"{p}/{f_name}", "w+")
-        # build payload
-        # payload = f"Date\t\tTime\t\tSession ID\tclient\t\tData\n"
-        payload = f"Session ID\tclient\t\tData\n"
 
-        print(payload)
+        # build payload
+        payload = ""
+
         # write payload
         f1.write(payload)
+
         # close file
         f1.close()
-        # print(f'new file {f_name} created')
+
+        # return the filename
     return f_name
 
 
-# #  open file
-# def access_log(curr_time, session_id, clients, data):
-#     # build the filename and validate the existence against the 'files' list.
-#     f_name = file_name(clients)
-#     # build the filename and path to pass as argument
-#     f1 = f"{p}/{f_name}"
-#
-#     # pass the arguments along to create and or update log data
-#     res = write_log(f1, curr_time, session_id, f_name[:9], f_name[9:18], data)
-#     # print(res)
-#     return f"accessed {f_name}"
-
-
 # write chat to log
-def write_log(session_id, client_a, client_b, data):
-    f = file_name([client_a, client_b])
+def write_log(session_id, clients, data):
+    f = file_name(clients)
     # open file with append rights
     f1 = open(f"{p}/{f}", "a+")
 
     # build payload
     # payload = f"{curr_time} {session_id} {client_a} {client_b}:\n {data}\n"
-    payload = f"{session_id}\t\t{client_a}\t{data}\n"
-    # print(payload)
+    payload = f"{session_id}\tfrom: {clients[1]}\t\t{data}\n"
+
     # write payload
     f1.write(payload)
+
     # close file
     f1.close()
+
+    # return wrote to file name
     return f'wrote to {f1.name}'
 
 
 # read file to end user
-def read_log(clienta, clientb):
-    f = file_name([clienta, clientb])
+def read_log(clients):
+    print("chat-history ", clients)
+    f = file_name(clients)
+    print(f"{p}/{f}")
+
     f1 = open(f"{p}/{f}", "r")
+
     log = f1.readlines()
-    for line in log:
-        print(line)
+
     f1.close()
-    return
+
+    return log

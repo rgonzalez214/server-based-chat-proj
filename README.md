@@ -7,7 +7,6 @@
   *** Thanks again! Now go create something AMAZING! :D
   -->
 
-
   <!-- PROJECT SHIELDS -->
   <!--
   *** I'm using markdown "reference style" links for readability.
@@ -51,15 +50,9 @@
     <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributors">Contributors</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#assignment-milestones">Assignment Milestons</a></li>
     <li><a href="#assignnment-grading-criteria">Assignment Grading Criteria</a></li>
     
   </ol>
@@ -85,7 +78,7 @@ Code will explicitly create sockets, send data and receive data from the sockets
 
 ## To Dos
 
-###  <span style="color:#0074CC">Connection to the Server</span>
+###  <span style="color:#0074CC">1.Connection to the Server</span>
 A client needs to connect first to the server. Connection to the server is initiated when a user logs on.
 1. When the user at client A logs on, client A sends a HELLO (Client-ID-A) message to the server, using UDP transport.
 2. The server verifies that Client-ID-A is an ID on the list of subscribers. If so, the server retrieves the client’s secret key and sends a CHALLENGE (rand) message to the client, using UDP.
@@ -94,8 +87,8 @@ A client needs to connect first to the server. Connection to the server is initi
 5. Client A establishes a TCP connection to the port at port_number and sends a CONNECT (rand_cookie) to the server. From this point on, until the TCP connection is closed, all data (signaling messages and chat) is exchanged over the TCP connection.
 6. The server sends CONNECTED to the client. The client is connected.
 7. The client tears down the TCP connection when the user types “Log off” or when the activity timer expires.
-8. 
-###  <span style="color:#0074CC">Client A Initiates Chat Session to B</span>
+
+###  <span style="color:#0074CC">2. Client A Initiates Chat Session to Client B</span>
 This scenario will go through the following steps. Client A must have already gone through the
 connection phase and be connected to the server.
 1. To start a chat with client B, the end user types “Chat Client-ID-B”, and client A sends a
@@ -109,8 +102,7 @@ client B is not available, the server sends UNREACHABLE (Client-ID-B) to client 
 Chat”, and the associated Client sends END_REQUEST (session-ID) to the server.
 3. The server sends an END_NOTIF(session-ID) to the other client. The Clients display “Chat
 ended” to their respective end users.
-
-###  <span style="color:#0074CC">Security</span>
+###  <span style="color:#0074CC">3. Security</span>
 ####  <span style="color:#0074CC">Authentication</span>
 The server is assumed secure, and only the client needs to be authenticated. Authentication is
 based on the challenge/response mechanism, used in cellular networks.
@@ -128,15 +120,15 @@ which takes as input rand and K_A, to generate a ciphering key CK_A. For this as
 hash function for A8: CK_A = hash2(rand + K_A).
 ####  <span style="color:#0074CC">Integrity protection</span>
 For simplicity, integrity protection is not implemented.
-###  <span style="color:#0074CC">Chat History</span>
+###  <span style="color:#0074CC">4. Chat History</span>
 In addition, the server will maintain chat history of each client. At any time in the connected
 state, client A can see the history of past chat messages with client B by sending the
 HISTORY (Client-ID-B) message to the server. In response the server sends all the past chat
 messages exchanged between client A and client B. Client A should display all the chat
 messages in the history in the following format
-<session_id> <from: sending client> <chat message>
+<session_id> <from: sending client> &lt;chat message>
 
-###  <span style="color:#0074CC">Protocol Messages</span>
+###  <span style="color:#0074CC">5. Protocol Messages</span>
 The significant fields of the messages along with their semantics are defined below. As part of
 the project assignment, you have to define the precise syntax and format of the messages.
 * HELLO (Client-ID-A): Initiates the process for Client A to be authenticated and
@@ -173,7 +165,7 @@ requested the history. Sending Client-ID is the ID of the client who sent the ch
 message, and chat message is the chat message in the history. There is one
 HISTORY_RESP message for each chat message in the history.
 
-###  <span style="color:#0074CC">Client Side State Diagram</span>
+###  <span style="color:#0074CC">6. Client Side State Diagram</span>
 
 #### Connection Phase
 
@@ -183,20 +175,20 @@ HISTORY_RESP message for each chat message in the history.
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="image/CSD-chat-phase.png" alt="chat" width="480px">
 
-###  <span style="color:#0074CC">Server Side State Diagram </span>
+###  <span style="color:#0074CC">7. Server Side State Diagram </span>
 #### Connection Phase
-* Need to do
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="C:\Users\adria\OneDrive\Desktop\JUNIOR\4390\DiagramsForProject\ServerSideConnectRevised.drawio.png" alt="conn" width="px">
   
 #### Chat Phase
-* Need to do
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="C:\Users\adria\OneDrive\Desktop\JUNIOR\4390\DiagramsForProject\ServerSideChat.drawio.png" alt="conn" width="">
 
 <br/>
 
-### <span style="color:#0074CC">Connection Phases</span>
+### <span style="color:#0074CC">8. Connection Phases</span>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="image/Connection-phases.png" alt="chat" width="480px">
 
 
-###  <span style="color:#0074CC">Validation Scenarios</span>
+###  <span style="color:#0074CC">9. Validation Scenarios</span>
 We will be validating the code based on the following scenarios.
 <br/>
 ### <span style="color:#0074CC">Basic chat initiated and closed by A</span>
@@ -210,25 +202,39 @@ We will be validating the code based on the following scenarios.
 |4 | Client A and client B exchange chat messages | What client　A’s　user　types　should　be　displayed　at client B, and vice versa |
 |5 |Client A’s user types “End chat” | Client A should send END_REQUEST to server and display “Chat ended Client B should receive END_NOTIF from server and display “Chat ended”|
 |6 |Client A’s user types “Log off"| Client A should close the TCP connection|
+
+
+
+####<span style="color:#0074CC">Basic chat initiated by A and closed by B</span>
+|Step|Action| Expected Behavior                                                                                                                         |
+|------|--------|-------------------------------------------------------------------------------------------------------------------------------------------|
+|0|Go through steps 0 to 4 of “Basic chat initiated and closed by A”|
+|1|Client B’s user types “End chat”| Client B should send END_REQUEST to server an display “Chat ended” Client A should receive END_NOTIF from server and display “Chat ended” |
+|2|Client A’s user types “Log off"| Client should close the TCP connection|
+
+
+
+
+
 <br/>
 
-#### <span style="color:#0074CC">Basic chat initiated by A and closed by B</span>
-| Step | Action | Expected behavior |
-|------|--------|-------------------|
-|0   | Go through steps 0 to 1 of “Basic chat initiated and closed by A”|   |
-| 1  | Client A’s user types “Chat Client-ID-B” | Client A should send CHAT_REQUEST, server should reply with UNREACHABLE, client A should display　＜br/> “Correspondent unreachable”  |
-|2 |Client B’s user types “Log on” | Client B and server should go through the connection phase and exchange the messages shown in “Connection Phase” <br/>Client B should display “Connected”|
-|3| Client A’s user types “Chat Client-ID-B”| Client A should send CHAT_REQUEST, server should send CHAT_STARTED to client B and client A. “Chat started” should be displayed at both clients|
-|4 |Client A and client B exchange chat messages | What client A’s user types should be displayed at client B, and vice versa|
-|5 | Client B’s user types “End chat” |Client B should send END_REQUEST to server and display “Chat ended”<br/> Client A should receive END_NOTIF from server and display “Chat ended”|
-|6| Client A’s user types “Log　off"| Client A should close the TCP connection|
+#### <span style="color:#0074CC">Basic chat initiated by A, but B initially not connected</span>
+| Step | Action | Expected behavior                                                                                                                                         |
+|------|--------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+|0   | Go through steps 0 to 1 of “Basic chat initiated and closed by A”|                                                                                                                                                           |
+| 1  | Client A’s user types “Chat Client-ID-B” | Client A should send CHAT_REQUEST, server should reply with UNREACHABLE, client A should display “Correspondent unreachable”                              |
+|2 |Client B’s user types “Log on” | Client B and server should go through the connection phase and exchange the messages shown in “Connection Phase” <br/>Client B should display “Connected” |
+|3| Client A’s user types “Chat Client-ID-B”| Client A should send CHAT_REQUEST, server should send CHAT_STARTED to client B and client A. “Chat started” should be displayed at both clients           |
+|4 |Client A and client B exchange chat messages | What client A’s user types should be displayed at client B, and vice versa                                                                                |
+|5 | Client B’s user types “End chat” | Client B should send END_REQUEST to server and display “Chat ended”<br/> Client A should receive END_NOTIF from server and display “Chat ended”           |
+|6| Client A’s user types “Logoff"| Client A should close the TCP connection                                                                                                                  |
 
 </br>
 
 #### <span style="color:#0074CC">Basic chat initiated by C, but B is already in another chat</span>
 
 |Step |Action |Expected behavior|
-|-|-|-|
+|------|--------|-------------------|
 |0| Go through steps 0 to 4 of “Basic chat initiated and closed by A”||
 |1| Client C’s user types “Log on” | Client C and server should go through the connection phase and exchange the messages shown in “Connection Phase” </br> Client C should display “Connected”|
 |2| Client C’s user types “Chat Client-ID-B” | Client C should send CHAT_REQUEST, server should reply with UNREACHABLE, client C should display “Correspondent unreachable” |
@@ -237,8 +243,8 @@ We will be validating the code based on the following scenarios.
 
 #### <span style="color:#0074CC">History recall</span>
 |Step |Action |Expected behavior|
-|-|-|-|
-|0| Go through the steps of| “Basic chat initiated and closed by A” |
+|------|--------|-------------------|
+|0| Go through the steps of “Basic chat initiated and closed by A” |
 |1 | Client B’s user types “Log on" | Client B and server should go through the connection phase and exchange the messages shown in “Connection Phase” <br/> Client B should display “Connected”|
 |2 |Client A’s user types “History Client-ID-B”| Client A should send HISTORY_REQ and should receive all the chat messages of the last chat session with B, sent in one or more HISTORY_RESP messages|
 
@@ -247,106 +253,7 @@ We will be validating the code based on the following scenarios.
 #### <span style="color:#0074CC">Simultaneous chat sessions</span>
 Verify you can establish 5 simultaneous chat sessions between 5 pairs of clients.
 
-
-
-
-
-<br/>
-
-## Built With
-
-* [Python.js](https://www.python.org//)
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- GETTING STARTED -->
-## Getting Started
-?
-
-### <span style="color:#0074CC">Prerequisites</span>
- 
-EX:
-* npm 
-  ```sh
-  npm install npm@latest -g
-  ``` 
-  
-### <span style="color:#0074CC">Installation</span>
-EX: 
-
-1. Clone the repo
-   ```sh
-   git clone https://github.com/github_username/repo_name.git
-   ```
-2. Install NPM packages
-   ```sh
-   npm install
-   ```
-3. Connect to the server
-  * Use provided server address
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
-Use this space to show useful examples of how to use the application. 
-- Additional screenshots
-- Code examples
-- Demos
-- Links to more resources.
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- ROADMAP -->
-## Roadmap
-
-- [ ] Feature 1
-<!-- 
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
-    - [ ] 
-See the [open issues](https://github.com/github_username/repo_name/issues) for a full list of proposed features (and known issues). 
--->
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- CONTRIBUTORS -->
-## Contributors
-<br/>
-<div align="center">
-
-
-
-
-|<img src="image/avaimg.png" alt="Logo" width="80px">|<img src="image/avaimg.png" alt="Logo" width="80px">|<img src="image/avaimg.png" alt="Logo" width="80px">|<img src="image/avaimg.png" alt="Logo" width="80px">|
-| -------   | ------------- |------------- | -----|
-| [@Your_Name](https://twitter.com/kantancoder)  | [@Your_Name](https://twitter.com/Your_Name)  | [@Your_Name](https://twitter.com/Your_Name) |  [@Your_Name](https://twitter.com/Your_Name) | 
-| email@email_client.com | email@email_client.com | email@email_client.com | email@email_client.com |
-|[![LinkedIn][linkedin-shield]][linkedin1-url]|[![LinkedIn][linkedin-shield]][linkedin2-url]|[![LinkedIn][linkedin-shield]][linkedin3-url]|[![LinkedIn][linkedin-shield]][linkedin4-url]|
-
-</div>
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-<!-- LICENSE -->
-## License
-
-<!-- Distributed under the MIT License. See `LICENSE.txt` for more information. -->
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-<br/>
-
-## Assignment Milestones
-### <span style="color:#0074CC">What to Turn In</span>
+### <span style="color:#0074CC"> 10. What to Turn In</span>
 1. A proposed action plan by the due date specified in “ProjectTimeline” in “Projects
 Overview”.
 2. A team report by by the due date specified in “ProjectTimeline” in “Projects Overview”.
@@ -381,7 +288,75 @@ sessions will take place towards the end of the semester
 
  Note: There will be a separate session (taking place outside of lecture hours) for you to demo your code is running and answer questions about your code and design. The code demo sessions will take place towards the end of the semester.
 
+
+
+
+<br/>
+
+## Built With
+
+* [Python.js](https://www.python.org//)
 <p align="right">(<a href="#top">back to top</a>)</p>
+
+
+<!-- GETTING STARTED -->
+## Getting Started
+Must use Python 3.10
+
+
+
+<!-- USAGE EXAMPLES -->
+## Usage
+
+Use this space to show useful examples of how to use the application. 
+- Additional screenshots
+- Code examples
+- Demos
+- Links to more resources.
+
+
+
+<!-- ROADMAP -->
+
+
+
+<!-- 
+- [ ] Feature 2
+- [ ] Feature 3
+    - [ ] Nested Feature
+    - [ ] 
+See the [open issues](https://github.com/github_username/repo_name/issues) for a full list of proposed features (and known issues). 
+-->
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+
+
+<!-- CONTRIBUTORS -->
+## Contributors
+<br/>
+<div align="center">
+
+
+
+
+| <img src="https://media-exp1.licdn.com/dms/image/C5603AQEdibgGk-rRnA/profile-displayphoto-shrink_400_400/0/1610149081150?e=1657152000&v=beta&t=OY81sdN1YXI1LT34Y1EmuYp2J99-cla9os6tGkNlK-U" alt="Logo" width="80px"> |<img src="image/avaimg.png" alt="Logo" width="80px">| <img src="image/avaimg.png" alt="Logo" width="80px"> | <img src="image/avaimg.png" alt="Logo" width="80px"> |
+|------------------------------------------------------| ------------- |------------------------------------------------------|---------------------------------------------------|
+| [@Kantancoder](https://twitter.com/kantancoder)      | [@Your_Name](https://twitter.com/Your_Name)  | [@Your_Name](https://twitter.com/Your_Name)          | [@Adrian](https://twitter.com/Your_Name)          | 
+| rogonzalez214@gmail.com                              | email@email_client.com | email@email_client.com                               | adriansanchez68.as@gmail.com                      |
+| [![LinkedIn][linkedin-shield]][linkedin1-url]        |[![LinkedIn][linkedin-shield]][linkedin2-url]| [![LinkedIn][linkedin-shield]][linkedin3-url]        | [![LinkedIn][linkedin-shield]][linkedin4-url]     |
+
+</div>
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+
+<!-- LICENSE -->
+
+
+<!-- Distributed under the MIT License. See `LICENSE.txt` for more information. -->
+
+
+<br/>
 
 <br/>
 
@@ -421,7 +396,7 @@ the professionalism of its appearance.
 [license-url]: https://github.com/github_username/repo_name/blob/master/LICENSE.txt
 -->
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin1-url]: https://linkedin.com/in/linkedin_username
+[linkedin1-url]: https://linkedin.com/in/rolando-gonzalez
 [linkedin2-url]: https://linkedin.com/in/linkedin_username
 [linkedin3-url]: https://linkedin.com/in/linkedin_username
 [linkedin3-url]: https://linkedin.com/in/linkedin_username

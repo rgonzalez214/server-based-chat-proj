@@ -14,7 +14,8 @@ from common import algorithms
 SERVER_IP = "127.0.0.1"
 UDP_PORT = 8008
 TCP_PORT = None
-
+hist_log = ""
+temp_client = ""
 # Function to assign each client an ID which is not part of usedClientIDs (currently active clients)
 def AssignIDandKey():
     f1 = open("clientsIDs.txt", "r")
