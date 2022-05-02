@@ -341,8 +341,8 @@ See the [open issues](https://github.com/github_username/repo_name/issues) for a
 
 | <img src="https://media-exp1.licdn.com/dms/image/C5603AQEdibgGk-rRnA/profile-displayphoto-shrink_400_400/0/1610149081150?e=1657152000&v=beta&t=OY81sdN1YXI1LT34Y1EmuYp2J99-cla9os6tGkNlK-U" alt="Logo" width="80px"> |<img src="image/avaimg.png" alt="Logo" width="80px">| <img src="image/avaimg.png" alt="Logo" width="80px"> | <img src="image/avaimg.png" alt="Logo" width="80px"> |
 |------------------------------------------------------| ------------- |------------------------------------------------------|---------------------------------------------------|
-| [@Kantancoder](https://twitter.com/kantancoder)      | [@Your_Name](https://twitter.com/Your_Name)  | [@Your_Name](https://twitter.com/Your_Name)          | [@Adrian](https://twitter.com/Your_Name)          | 
-| rogonzalez214@gmail.com                              | email@email_client.com | email@email_client.com                               | adriansanchez68.as@gmail.com                      |
+| [@Kantancoder](https://twitter.com/kantancoder)      | [@ThanosWasTaken](https://twitter.com/ThanosWasTaken)  | [@Your_Name](https://twitter.com/Your_Name)          | [@Adrian](https://twitter.com/Your_Name)          | 
+| rogonzalez214@gmail.com                              | surya.modern.work@gmail.com | email@email_client.com                               | adriansanchez68.as@gmail.com                      |
 | [![LinkedIn][linkedin-shield]][linkedin1-url]        |[![LinkedIn][linkedin-shield]][linkedin2-url]| [![LinkedIn][linkedin-shield]][linkedin3-url]        | [![LinkedIn][linkedin-shield]][linkedin4-url]     |
 
 </div>
@@ -382,7 +382,7 @@ the professionalism of its appearance.
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/github_username/repo_name.svg?style=for-the-badge
 [contributor1-url]:https://github.com/rgonzalez214
-[contributor2-url]:https://github.com/username
+[contributor2-url]:https://github.com/bond1999
 [contributor3-url]:https://github.com/username
 [contributor3-url]:https://github.com/username
 <!-- 
@@ -397,7 +397,7 @@ the professionalism of its appearance.
 -->
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin1-url]: https://linkedin.com/in/rolando-gonzalez
-[linkedin2-url]: https://linkedin.com/in/linkedin_username
+[linkedin2-url]: https://linkedin.com/in/surya-aggarwal
 [linkedin3-url]: https://linkedin.com/in/linkedin_username
 [linkedin3-url]: https://linkedin.com/in/linkedin_username
 [linkedin4-url]: https://linkedin.com/in/linkedin_username
