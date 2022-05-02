@@ -43,13 +43,11 @@ def send_response(sock, client_id, Res):
     sock.sendto(bytes(f"RESPONSE({client_id},{Res})", 'utf-8'), (SERVER_IP, UDP_PORT))
 
 
-def send_connect(sock, rand_cookie, ciphering_key):
-    fernet = Fernet(ciphering_key)
+def send_connect(sock, rand_cookie, fernet):
     sock.send(fernet.encrypt(bytes(f"CONNECT({rand_cookie})", 'utf-8')))
 
 
-def send_chat_request(sock, client_id, ciphering_key):
-    fernet = Fernet(ciphering_key)
+def send_chat_request(sock, client_id, fernet):
     sock.send(fernet.encrypt(bytes(f"CHAT_REQUEST({client_id})", 'utf-8')))
 
 
@@ -75,6 +73,7 @@ class Client:
     def Sender(self):
         while True:
             try:
+                time.sleep(1)
                 client_input = input(f"{self.client_id} > ")
                 # Authentication Phase on typing in "log on"
                 if client_input == "log on":
@@ -116,7 +115,7 @@ class Client:
                                 self.tcp_sock.connect((SERVER_IP, TCP_PORT))
 
                                 start_new_thread(self.Receiver,(self.tcp_sock,))
-                                send_connect(self.tcp_sock, self.rand_cookie, self.ciphering_key)
+                                send_connect(self.tcp_sock, self.rand_cookie, fernet)
 
                 elif client_input[0:4] == "chat":
                     f1 = open("clientsIDs.txt", 'r')
@@ -131,7 +130,7 @@ class Client:
                                 print("[SYSTEM] Please enter a correct 10 digit client-ID")
                     except TypeError:
                         raise TypeError
-                    send_chat_request(self.tcp_sock, clientID, self.ciphering_key)
+                    send_chat_request(self.tcp_sock, clientID, fernet)
 
                 elif input == "log off":
                     print("Exiting Program")
@@ -148,7 +147,7 @@ class Client:
     def Receiver(self, tcp_sock):
         while True:
             data = self.tcp_sock.recv(1024)
-
+            print(data)
             # Decrypting hashed messages
             fernet = Fernet(self.ciphering_key)
             data = fernet.decrypt(data)
