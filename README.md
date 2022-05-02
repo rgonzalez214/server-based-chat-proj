@@ -295,7 +295,7 @@ sessions will take place towards the end of the semester
 
 ## Built With
 
-* [Python.js](https://www.python.org//)
+* [Python](https://www.python.org/)
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 
