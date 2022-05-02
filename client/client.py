@@ -42,6 +42,9 @@ def send_response(sock, client_id, Res):
 def chat_request(Client_ID_X):
     pass
 
+def send_history_request(sock, target_id):
+    sock.sendto(bytes(f"HISTORY_REQ({target_id})", 'utf-8'), (SERVER_IP, PORT))
+
 
 class Client:
     def __init__(self):
@@ -103,6 +106,38 @@ class Client:
                         global PORT
                         PORT = data[1][:-1]
                         self.protocol = "TCP"
+
+        if client_input[:7] == "history":
+            try:
+                global temp_client
+                global hist_log
+                client_b = client_input[8:18].replace(" ", "")
+                if len(hist_log) > 0 and temp_client == client_b:
+                    print(hist_log[-1])
+                    hist_log.pop(-1)
+                #     will need to clear hist_log somewhere if new messages are saved in log
+                else:
+                    # fetch history response through TCP
+                    print("[PROTOCOL] Sending chat history request to server...")
+                    print("prospective client_B ", client_b)
+                    send_history_request(self.sock, client_b)
+
+                    hist_log = self.sock.recvfrom(1024)
+            except IndexError:
+                print('No history available')
+
+
+
+            # Waiting for chat log response
+            self.sock.settimeout(10)
+            data, server_address = self.sock.recvfrom(1024)
+            if str(data[0:12], 'utf-8') == "HISTORY_RESP":
+                print("[PROTOCOL] Print chat history!")
+                data = str(data, 'utf-8').split(',')
+                # parse out and read chat log out line by line
+                print(data)
+            print(data)
+
         if input == "log off":
             print("Exiting Program")
             print("Thank you for participating in our chat bot!")
@@ -140,7 +175,7 @@ class Client:
                 print("Successfully Authenticated!")
                 data = str(data,'utf-8').split(",")
                 rand_cookie = data[1][13:]
-                TCP_PORT = response[2][:-1]
+                TCP_PORT = data[2][:-1]
                 print(rand_cookie, TCP_PORT)
             print("Welcome to the Chat Server.\n")
 

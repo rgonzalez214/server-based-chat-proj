@@ -29,6 +29,11 @@ def send_connected(sock, currentClient):
     logging.info('Sending CONNECTED to client %s ', currentClient.client_address)
     sock.sendto(bytes("CONNECTED TO SERVER", "utf-8"))
 
+def send_history(sock, currentClient, client_b):
+    logging.info('Sending HISTORY_RESP to client %s ', currentClient.client_address)
+    log = chat_history.read_log([currentClient, client_b])
+    sock.sendto(bytes(f"HISTORY_RESP({log})", 'utf-8'), currentClient.client_address)
+
 def send_chat_started():
     pass
 
@@ -171,12 +176,7 @@ class TCPServer:
         if data[0:11] == "HISTORY_REQ":
             # print(MESSAGE)
             client_b = data[12:22]
-            log = chat_history.read_log(['current_client', client_b])
-            if len(log) > 0:
-                # forward log to the requesting client
-                print("push chat history on to client")
-            else:
-                print("no history found")
+            send_history(client_address, client_b)
 
 
 def main():
