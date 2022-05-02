@@ -30,15 +30,22 @@ def send_auth_fail(sock, currentClient):
 def send_connected(currentClient, fernet):
     currentClient.client_connection.send(fernet.encrypt(bytes("CONNECTED", "utf-8")))
 
-def send_chat_started(sessionID, currentClient, requestedClient, fernet):
-    currentClient.client_connection.send(fernet.encrypt(bytes(f"CHAT_STARTED({sessionID},{requestedClient.client_id}", "utf-8")))
+def send_chat_started(sessionID, currentClient, requestedClient):
+    fernet = Fernet(currentClient.ciphering_key)
+    currentClient.client_connection.send(fernet.encrypt(bytes(f"CHAT_STARTED({sessionID},{requestedClient.client_id})", "utf-8")))
+
+def send_unreachable(currentClient, fernet):
+    currentClient.client_connection.send(fernet.encrypt(bytes("CONNECTED", "utf-8")))
+
+def send_endnotif(requestedClient):
+    fernet = Fernet(requestedClient.ciphering_key)
+    requestedClient.client_connection.send(fernet.encrypt(bytes(f"END_NOTIF({requestedClient.sessionID})", "utf-8")))
+
+def send_req(currentClient):
 
 
-def send_unavailable(sock, currentClient, fernet):
-    pass
+def send_resp(requestedClient):
 
-def send_end_notif():
-    pass
 
 transitioning_client = None
 
@@ -183,8 +190,8 @@ class TCPServer:
                     sessionID = algorithms.create_sessionID()
                     client_a.sessionID = sessionID
                     client_b.sessionID = sessionID
-                    send_chat_started(sessionID, client_a, client_b, fernet)
-                    send_chat_started(sessionID, client_b, client_a, fernet)
+                    send_chat_started(sessionID, client_a, client_b)
+                    send_chat_started(sessionID, client_b, client_a)
 
             # elif not client_available:
                 #     print(MESSAGE)

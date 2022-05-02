@@ -60,7 +60,8 @@ class Client:
         self.rand_cookie = None
         self.Res = None
         self.ciphering_key = None
-        self.recv_buffer = ""
+        self.sessionID = None
+        self.session_client = None
 
         self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -126,19 +127,24 @@ class Client:
                             if client_input[5:15] == client[0:10]:
                                 clientID = client_input[5:15]
                                 break
-                            else:
-                                print("[SYSTEM] Please enter a correct 10 digit client-ID")
+
+                        if clientID == None:
+                            print("[SYSTEM] Please enter a correct 10 digit client-ID")
                     except TypeError:
                         raise TypeError
+                    fernet = Fernet(self.ciphering_key)
                     send_chat_request(self.tcp_sock, clientID, fernet)
 
-                elif input == "log off":
-                    print("Exiting Program")
-                    print("Thank you for participating in our chat bot!")
-                    exit(0)
+                elif client_input[0:4] == "End chat":
+                    fernet = Fernet(self.ciphering_key)
+                    send_chat_request(self.tcp_sock, self.sessionID, fernet)
+                    print("[SYSTEM] CHAT ENDED!")
 
-                else:
-                    print("[NOTIFICATION] User not logged in, type \"log in\" to connect to the chat server")
+                elif client_input == "log off":
+                    print("[SYSTEM] Exiting Program")
+                    print("[END] Thank you for participating in our chat bot!")
+                    self.tcp_sock.close()
+                    exit(0)
 
             except TypeError:
                 print("[ERROR] Invalid Input")
@@ -147,12 +153,17 @@ class Client:
     def Receiver(self, tcp_sock):
         while True:
             data = self.tcp_sock.recv(1024)
-            print(data)
             # Decrypting hashed messages
             fernet = Fernet(self.ciphering_key)
             data = fernet.decrypt(data)
+            print(data)
             if str(data[0:9], 'utf-8') == "CONNECTED":
                 print(f"[SYSTEM] Connected to the chat server! Welcome, {self.client_id}.")
+
+            if str(data[0:12], 'utf-8') == "CHAT_STARTED":
+                self.sessionID = str(data[13:23], 'utf-8')
+                self.session_client = str(data[24:-1], 'utf-8')
+                print(f"[{self.sessionID}] CHAT STARTED with {self.session_client}!")
 
 
 def main():
