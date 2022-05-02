@@ -177,10 +177,10 @@ HISTORY_RESP message for each chat message in the history.
 
 ###  <span style="color:#0074CC">7. Server Side State Diagram </span>
 #### Connection Phase
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="images/ServerSideConnectRevised.drawio.png" alt="conn" width="px">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="images/ServerSideConnectRevised.drawio.png" alt="conn" width="480px">
   
 #### Chat Phase
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="images/ServerSideChat.drawio.png" alt="conn" width="">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="images/ServerSideChat.drawio.png" alt="conn" width="480">
 
 <br/>
 
