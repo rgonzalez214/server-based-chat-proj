@@ -339,7 +339,7 @@ See the [open issues](https://github.com/github_username/repo_name/issues) for a
 
 
 
-| <img src="https://media-exp1.licdn.com/dms/image/C5603AQEdibgGk-rRnA/profile-displayphoto-shrink_400_400/0/1610149081150?e=1657152000&v=beta&t=OY81sdN1YXI1LT34Y1EmuYp2J99-cla9os6tGkNlK-U" alt="Logo" width="80px"> |<img src="https://i.imgur.com/Zk0DsH2.png" alt="Logo" width="80px">| <img src="image/avaimg.png" alt="Logo" width="80px"> | <img src="image/avaimg.png" alt="Logo" width="80px"> |
+| <img src="https://media-exp1.licdn.com/dms/image/C5603AQEdibgGk-rRnA/profile-displayphoto-shrink_400_400/0/1610149081150?e=1657152000&v=beta&t=OY81sdN1YXI1LT34Y1EmuYp2J99-cla9os6tGkNlK-U" alt="Logo" width="80px"> |<img src="https://avatars.githubusercontent.com/u/46317327?v=4" alt="Logo" width="80px">| <img src="image/avaimg.png" alt="Logo" width="80px"> | <img src="image/avaimg.png" alt="Logo" width="80px"> |
 |------------------------------------------------------| ------------- |------------------------------------------------------|---------------------------------------------------|
 | [@Kantancoder](https://twitter.com/kantancoder)      | [@ThanosWasTaken](https://twitter.com/ThanosWasTaken)  | [@Your_Name](https://twitter.com/Your_Name)          | [@Adrian](https://twitter.com/Your_Name)          | 
 | rogonzalez214@gmail.com                              | surya.modern.work@gmail.com | email@email_client.com                               | adriansanchez68.as@gmail.com                      |
@@ -398,7 +398,7 @@ the professionalism of its appearance.
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin1-url]: https://linkedin.com/in/rolando-gonzalez
 [linkedin2-url]: https://linkedin.com/in/surya-aggarwal
-[linkedin3-url]: https://linkedin.com/in/linkedin_username
+[linkedin3-url]: https://linkedin.com/in/Timothy-Seungpil-Choi
 [linkedin3-url]: https://linkedin.com/in/linkedin_username
 [linkedin4-url]: https://linkedin.com/in/linkedin_username
 [product-screenshot]: images/screenshot.png
