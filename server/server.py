@@ -77,7 +77,7 @@ class UDPServer:
             # Receive data from client
             data, client_address = self.sock.recvfrom(1024)
             newClient = Client(client_address)
-            logging.info(f"[UDP] {data}")
+            logging.info(f"[UDP] {str(data, 'utf-8')}")
             # Add client to list of clients
             if self.clients_list == []:
                 self.clients_list.append(newClient)

@@ -77,7 +77,8 @@ class Client:
 
     # Function to parse each message input by the client into protocol messages
     def Sender(self):
-        while True:
+        try:
+            while True:
                 time.sleep(1)
                 client_input = input(f"{self.client_id} > ")
                 # Authentication Phase on typing in "log on"
@@ -142,8 +143,6 @@ class Client:
                             print("[SYSTEM] Please enter a correct 10 digit client-ID")
                     elif client_input[:7] == "history":
                         try:
-                            global temp_client
-                            global hist_log
                             client_b = client_input[8:18].replace(" ", "")
                             if len(hist_log) > 0 and temp_client == client_b:
                                 print(hist_log[-1])
@@ -175,7 +174,8 @@ class Client:
                     else:
                         fernet = Fernet(self.ciphering_key)
                         send_chat(self.tcp_sock, self.sessionID, client_input, fernet)
-
+        except KeyboardInterrupt:
+            pass
 
     # Processes UDP/TCP Protocol messages
     def Receiver(self, tcp_sock):
