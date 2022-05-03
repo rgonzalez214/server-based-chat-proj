@@ -32,9 +32,9 @@ def send_chat_started(sessionID, currentClient, requestedClient):
     fernet = Fernet(currentClient.ciphering_key)
     currentClient.client_connection.send(fernet.encrypt(bytes(f"CHAT_STARTED({sessionID},{requestedClient.client_id})", "utf-8")))
 
-def send_unreachable(currentClient, requestedClient):
+def send_unreachable(currentClient, client_id):
     fernet = Fernet(currentClient.ciphering_key)
-    currentClient.client_connection.send(fernet.encrypt(bytes(f"UNREACHABLE({requestedClient.client_id})", "utf-8")))
+    currentClient.client_connection.send(fernet.encrypt(bytes(f"UNREACHABLE({client_id})", "utf-8")))
 
 def send_endnotif(requestedClient):
     fernet = Fernet(requestedClient.ciphering_key)
@@ -77,7 +77,7 @@ class UDPServer:
             # Receive data from client
             data, client_address = self.sock.recvfrom(1024)
             newClient = Client(client_address)
-
+            logging.info(f"[UDP] {data}")
             # Add client to list of clients
             if self.clients_list == []:
                 self.clients_list.append(newClient)
@@ -158,66 +158,71 @@ class TCPServer:
 
     def handle_client(self, current_client):
         while True:
-            data = current_client.client_connection.recv(1024)
-            logging.info(f"Received on TCP: {data}")
-            fernet = Fernet(current_client.ciphering_key)
-            data = str(fernet.decrypt(data), 'utf-8')
-            logging.info(f"Received on TCP: {data}")
-            if data[0:7] == "CONNECT":
-                if current_client.rand == data[8:-1]:
-                    send_connected(current_client, fernet)
-                else:
-                    logging.info('Client %s cannot be connected. Rand_Cookie invalid!', current_client.client_address)
+            try:
+                data = current_client.client_connection.recv(1024)
+                # logging.info(f"[TCP] {data}")
+                fernet = Fernet(current_client.ciphering_key)
+                data = str(fernet.decrypt(data), 'utf-8')
+                logging.info(f"[TCP] {data}")
+                if data[0:7] == "CONNECT":
+                    if current_client.rand == data[8:-1]:
+                        send_connected(current_client, fernet)
+                    else:
+                        logging.info('Client %s cannot be connected. Rand_Cookie invalid!', current_client.client_address)
 
-            elif data[0:12] == "CHAT_REQUEST":
-                client_id = data[13:-1]
-                client_a = current_client
-                client_b = None
-                for requested_client in self.clients_list:
-                    if client_id == requested_client.client_id:
-                        client_b = requested_client
+                elif data[0:12] == "CHAT_REQUEST":
+                    client_id = data[13:-1]
+                    client_a = current_client
+                    client_b = None
+                    for requested_client in self.clients_list:
+                        if client_id == requested_client.client_id:
+                            client_b = requested_client
+                            break
+                    if client_b != None and client_b.sessionID == None:
+                        sessionID = algorithms.create_sessionID()
+                        client_a.sessionID = sessionID
+                        client_b.sessionID = sessionID
+                        send_chat_started(sessionID, client_a, client_b)
+                        send_chat_started(sessionID, client_b, client_a)
+                    else:
+                        send_unreachable(client_a, client_id)
+
+                elif data[0:4] == "CHAT":
+                    data = data.split(",")
+                    sessionID = data[0][5:]
+                    message = data[1][:-1]
+                    client_a = current_client
+                    client_b = None
+                    for requested_client in self.clients_list:
+                        if client_a.client_id != requested_client.client_id and requested_client.sessionID == sessionID:
+                            client_b = requested_client
+                            break
+                    if client_b != None:
+                        send_chat(client_a, client_b, message)
+                        # History needs to happen Here
+                        print("chat_history.write_log()")
+
+                elif data[0:11] == "END_REQUEST":
+                    sessionID = data[12:-1]
+                    client_a = current_client
+                    client_b = None
+                    for requested_client in self.clients_list:
+                        if client_a.client_id != requested_client.client_id and sessionID == requested_client.sessionID:
+                            client_b = requested_client
+                            break
+                    if client_b != None:
+                        current_client.sessionID = None
+                        self.clients_list[self.clients_list.index(client_b)].sessionID = None
+                        send_endnotif(client_b)
+
+                elif data[0:11] == "HISTORY_REQ":
+                    # print(MESSAGE)
+                    chat_history.read_log("abcd", "efgh")
+            except ConnectionResetError:
+                for i, any_client in enumerate(self.clients_list):
+                    if any_client.client_id == current_client.client_id:
+                        self.clients_list.pop(i)
                         break
-                if client_b != None and client_b.sessionID == None:
-                    sessionID = algorithms.create_sessionID()
-                    client_a.sessionID = sessionID
-                    client_b.sessionID = sessionID
-                    send_chat_started(sessionID, client_a, client_b)
-                    send_chat_started(sessionID, client_b, client_a)
-                else:
-                    send_unreachable(client_a, client_b)
-
-            elif data[0:4] == "CHAT":
-                data = data.split(",")
-                sessionID = data[0][5:]
-                message = data[1][:-1]
-                client_a = current_client
-                client_b = None
-                for requested_client in self.clients_list:
-                    if client_a.client_id != requested_client.client_id:
-                        client_b = requested_client
-                        break
-                if client_b != None:
-                    send_chat(client_a, client_b, message)
-                    # History needs to happen Here
-                    print("chat_history.write_log()")
-
-            elif data[0:11] == "END_REQUEST":
-                sessionID = data[12:-1]
-                client_a = current_client
-                client_b = None
-                for requested_client in self.clients_list:
-                    if client_a.client_id != requested_client.client_id and sessionID == requested_client.sessionID:
-                        client_b = requested_client
-                        break
-                if client_b != None:
-                    current_client.sessionID = None
-                    self.clients_list[self.clients_list.index(client_b)].sessionID = None
-                    send_endnotif(client_b)
-
-            elif data[0:11] == "HISTORY_REQ":
-                # print(MESSAGE)
-                chat_history.read_log("abcd", "efgh")
-
 
 def main():
 

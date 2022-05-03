@@ -135,11 +135,11 @@ class Client:
 
                             if clientID == None:
                                 print("[SYSTEM] Please enter a correct 10 digit client-ID")
-                        except TypeError:
-                            raise TypeError
-                        fernet = Fernet(self.ciphering_key)
-                        send_chat_request(self.tcp_sock, clientID, fernet)
 
+                            fernet = Fernet(self.ciphering_key)
+                            send_chat_request(self.tcp_sock, clientID, fernet)
+                        except TypeError:
+                            print("[SYSTEM] Please enter a correct 10 digit client-ID")
                     elif client_input[:7] == "history":
                         try:
                             global temp_client
@@ -166,10 +166,12 @@ class Client:
                         exit(0)
                 # While Session is engaged
                 else:
-                    if client_input[0:8] == "End chat":
+                    if client_input == "End chat":
                         fernet = Fernet(self.ciphering_key)
                         send_end_request(self.tcp_sock, self.sessionID, fernet)
                         print("[SYSTEM] CHAT ENDED!")
+                        self.session_client = None
+                        self.sessionID = None
                     else:
                         fernet = Fernet(self.ciphering_key)
                         send_chat(self.tcp_sock, self.sessionID, client_input, fernet)
@@ -177,38 +179,51 @@ class Client:
 
     # Processes UDP/TCP Protocol messages
     def Receiver(self, tcp_sock):
-        while True:
-            data = self.tcp_sock.recv(1024)
-            # Decrypting hashed messages
-            fernet = Fernet(self.ciphering_key)
-            data = fernet.decrypt(data)
-            # print(data)
-            if str(data[0:9], 'utf-8') == "CONNECTED":
-                print(f"[SYSTEM] Connected to the chat server! Welcome, {self.client_id}.")
+        try:
+            while True:
+                data = self.tcp_sock.recv(1024)
+                # Decrypting hashed messages
+                fernet = Fernet(self.ciphering_key)
+                data = fernet.decrypt(data)
+                # print(data)
+                if str(data[0:9], 'utf-8') == "CONNECTED":
+                    print(f"[SYSTEM] Connected to the chat server! Welcome, {self.client_id}.")
 
-            elif str(data[0:12], 'utf-8') == "CHAT_STARTED":
-                self.sessionID = str(data[13:23], 'utf-8')
-                self.session_client = str(data[24:-1], 'utf-8')
-                print(f"[{self.sessionID}] CHAT STARTED with {self.session_client} (SESSION_ID: {self.sessionID})!")
+                elif str(data[0:12], 'utf-8') == "CHAT_STARTED":
+                    self.sessionID = str(data[13:23], 'utf-8')
+                    self.session_client = str(data[24:-1], 'utf-8')
+                    print(f"[{self.sessionID}] CHAT STARTED with {self.session_client} (SESSION_ID: {self.sessionID})!")
 
-            elif str(data[0:4], 'utf-8') == "CHAT":
-                data = str(data, 'utf-8').split(',')
-                self.sessionID = data[0][5:]
-                self.message = data[1][:-1]
-                print(f"[{self.sessionID}] {self.message}")
 
-            elif str(data[0:9], 'utf-8') == "END_NOTIF":
-                sessionID = str(data[10:-1], 'utf-8')
-                self.sessionID = None
-                self.session_client = None
-                print(f"[{sessionID}] Chat ended by another client {self.client_id}.")
+                elif str(data[0:9], 'utf-8') == "END_NOTIF":
+                    sessionID = str(data[10:-1], 'utf-8')
+                    print(f"[{sessionID}] Chat ended by another client {self.session_client}.")
+                    self.sessionID = None
+                    self.session_client = None
+
+                elif str(data[0:11], 'utf-8') == "UNREACHABLE":
+                    client_id = str(data[12:-1], 'utf-8')
+                    print(f"[SYSTEM] Client {client_id} is unreachable. Please try again later.")
+
+                elif str(data[0:4], 'utf-8') == "CHAT":
+                    data = str(data, 'utf-8').split(',')
+                    self.sessionID = data[0][5:]
+                    self.message = data[1][:-1]
+                    print(f"[{self.sessionID}] {self.message}")
+        except ConnectionResetError:
+            print("[SYSTEM] Server closed the connection. Try restarting the program.")
+
+        except:
+            pass
 
 
 def main():
-    logging.getLogger().setLevel(logging.DEBUG)
-    CurrentClient = threading.Thread(target=Client)
-    CurrentClient.start()
-
+    try:
+        logging.getLogger().setLevel(logging.DEBUG)
+        CurrentClient = threading.Thread(target=Client)
+        CurrentClient.start()
+    except KeyboardInterrupt:
+        pass
 
 main()
 
