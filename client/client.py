@@ -56,6 +56,10 @@ def send_chat(sock, sessionID, client_input, fernet):
 def send_end_request(sock, sessionID, fernet):
     sock.send(fernet.encrypt(bytes(f"END_REQUEST({sessionID})", 'utf-8')))
 
+def send_history_req(sock, clientID, fernet):
+    sock.send(fernet.encrypt(bytes(f"HISTORY_REQ({clientID})", 'utf-8')))
+
+
 class Client:
     def __init__(self):
 
@@ -141,22 +145,6 @@ class Client:
                             send_chat_request(self.tcp_sock, clientID, fernet)
                         except TypeError:
                             print("[SYSTEM] Please enter a correct 10 digit client-ID")
-                    elif client_input[:7] == "history":
-                        try:
-                            client_b = client_input[8:18].replace(" ", "")
-                            if len(hist_log) > 0 and temp_client == client_b:
-                                print(hist_log[-1])
-                                hist_log.pop(-1)
-                            #     will need to clear hist_log somewhere if new messages are saved in log
-                            else:
-                                # fetch history response through TCP
-                                print("[PROTOCOL] Sending chat history request to server...")
-                                print("prospective client_B ", client_b)
-                                # send_history_request(self.sock, client_b)
-
-                                hist_log = self.sock.recvfrom(1024)
-                        except IndexError:
-                            print('No history available')
 
                     elif client_input == "log off":
                         print("[SYSTEM] Exiting Program")
@@ -171,9 +159,29 @@ class Client:
                         print("[SYSTEM] CHAT ENDED!")
                         self.session_client = None
                         self.sessionID = None
+
+                    elif client_input[0:7] == "history":
+                        f1 = open("clientsIDs.txt", 'r')
+                        clients = f1.readlines()
+                        clientID = None
+                        try:
+                            for client in clients:
+                                if client_input[8:18] == client[0:10]:
+                                    clientID = client_input[8:18]
+                                    break
+
+                            if clientID == None:
+                                print("[SYSTEM] Please enter a correct 10 digit client-ID")
+                            fernet = Fernet(self.ciphering_key)
+                            send_history_req(self.tcp_sock, clientID, fernet)
+
+                        except TypeError:
+                            print("[SYSTEM] Please enter a correct 10 digit client-ID")
+
                     else:
                         fernet = Fernet(self.ciphering_key)
                         send_chat(self.tcp_sock, self.sessionID, client_input, fernet)
+
         except KeyboardInterrupt:
             pass
 
@@ -204,6 +212,13 @@ class Client:
                 elif str(data[0:11], 'utf-8') == "UNREACHABLE":
                     client_id = str(data[12:-1], 'utf-8')
                     print(f"[SYSTEM] Client {client_id} is unreachable. Please try again later.")
+
+                elif str(data[0:12], 'utf-8') == "HISTORY_RESP":
+                    data = str(data, 'utf-8').split(',')
+                    client_id = data[0][13:]
+                    message = data[1][:-1]
+                    message = message.split(':')
+                    print(f"[{message[0]}] {message[1]} : {message[2][0:-1]}")
 
                 elif str(data[0:4], 'utf-8') == "CHAT":
                     data = str(data, 'utf-8').split(',')

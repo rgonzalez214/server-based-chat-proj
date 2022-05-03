@@ -44,8 +44,9 @@ def send_chat(currentClient, requestedClient, message):
     fernet = Fernet(requestedClient.ciphering_key)
     requestedClient.client_connection.send(fernet.encrypt(bytes(f"CHAT({currentClient.sessionID},{message})", "utf-8")))
 
-def send_history_resp(currentClient, requestedClient, message):
-    pass
+def send_history_resp(currentClient, message):
+    fernet = Fernet(currentClient.ciphering_key)
+    currentClient.client_connection.send(fernet.encrypt(bytes(f"HISTORY_RESP({currentClient.client_id},{message})", "utf-8")))
 
 transitioning_client = None
 
@@ -200,7 +201,8 @@ class TCPServer:
                     if client_b != None:
                         send_chat(client_a, client_b, message)
                         # History needs to happen Here
-                        print("chat_history.write_log()")
+                        chat_history.write_log(client_a.sessionID, client_a, client_b, message)
+                        # print("chat_history.write_log()")
 
                 elif data[0:11] == "END_REQUEST":
                     sessionID = data[12:-1]
@@ -216,8 +218,16 @@ class TCPServer:
                         send_endnotif(client_b)
 
                 elif data[0:11] == "HISTORY_REQ":
-                    # print(MESSAGE)
-                    chat_history.read_log("abcd", "efgh")
+                    client_a = current_client
+                    client_b = None
+                    for requested_client in self.clients_list:
+                        if client_a.client_id != requested_client.client_id:
+                            client_b = requested_client
+                            break
+                    if client_b != None:
+                        log = chat_history.read_log(client_a, client_b)
+                        for line in log:
+                            send_history_resp(client_a, line)
             except ConnectionResetError:
                 for i, any_client in enumerate(self.clients_list):
                     if any_client.client_id == current_client.client_id:
