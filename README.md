@@ -20,7 +20,7 @@
 <br />
 <div align="center">
     <img src="image/server_chat_img.png" alt="Logo" width="480px">
-<h3 align="center">Server Based Chat</h3> 
+<h3 align="center">Multi-Threaded Chat Application</h3> 
     <p align="center">CS4390 - Computer Networks
     <BR/>
     Group Project
